@@ -1,12 +1,17 @@
+import AppLayout from "./components/layout/AppLayout"
+import { ThemeProvider } from "@/components/theme-provider";
+import { BrowserRouter } from "react-router-dom";
 
 function App() {
 
   return (
-    <>
-      <div className="container mx-auto">
-        <h1>Hello World</h1>
-      </div>
-    </>
+    <ThemeProvider defaultTheme="light" storageKey="dashmob-theme">
+      <BrowserRouter>
+        <AppLayout>
+          <h1>Hello World</h1>
+        </AppLayout>
+      </BrowserRouter>
+    </ThemeProvider>
   )
 }
 
