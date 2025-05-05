@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
+import Filter from "../Filter";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -18,7 +19,8 @@ const AppLayout = ({ children }: AppLayoutProps) => {
         }`}
       >
         <Header />
-        <main className="max-w-[1400px] mx-auto p-6">{children}</main>
+        <Filter />
+        <main className="mx-auto p-6">{children}</main>
       </div>
     </div>
   );
