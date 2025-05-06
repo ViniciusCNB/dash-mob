@@ -51,10 +51,10 @@ export const Barplot = ({ width, height, data }: BarplotProps) => {
           y={yScale(d.value) - 10}
           textAnchor="middle"
           alignmentBaseline="central"
-          fontSize={12}
+          fontSize={10}
           fill="var(--primary)"
         >
-          {d.value}
+          {d.value.toLocaleString('pt-BR')}
         </text>
         <text
           x={x + xScale.bandwidth() / 2}
@@ -85,11 +85,11 @@ export const Barplot = ({ width, height, data }: BarplotProps) => {
         y={yScale(value)}
         textAnchor="middle"
         alignmentBaseline="central"
-        fontSize={12}
+        fontSize={9}
         fill="var(--primary)"
         opacity={0.5}
       >
-        {value}
+        {value.toLocaleString('pt-BR')}
       </text>
     </g>
   ));
