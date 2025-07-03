@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "leaflet/dist/leaflet.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -118,5 +119,33 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Estilos específicos para Leaflet */
+@layer utilities {
+  .leaflet-container {
+    font-family: inherit;
+  }
+  
+  .leaflet-popup-content-wrapper {
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+  
+  .leaflet-popup-tip {
+    box-shadow: 0 3px 14px rgba(0,0,0,0.15);
+  }
+  
+  .leaflet-control-zoom a {
+    border-radius: 0.375rem;
+  }
+  
+  .leaflet-control-zoom a:first-child {
+    border-radius: 0.375rem 0.375rem 0 0;
+  }
+  
+  .leaflet-control-zoom a:last-child {
+    border-radius: 0 0 0.375rem 0.375rem;
   }
 }
