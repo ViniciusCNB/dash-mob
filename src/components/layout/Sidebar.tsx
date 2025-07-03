@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Warehouse, Route, Bus, Store, Building2, Pin, FilePen } from "lucide-react";
+import { ChevronLeft, ChevronRight, Warehouse, Route, Bus, Store, Building2, Pin, FilePen, Globe, ChartLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,9 +14,14 @@ const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
 
   const menuItems = [
     {
+      title: "Visão Geral",
+      icon: Globe,
+      path: "/",
+    },
+    {
       title: "Linhas",
       icon: Route,
-      path: "/",
+      path: "/linhas",
     },
     {
       title: "Ocorrências",
