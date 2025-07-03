@@ -1,5 +1,6 @@
 import AppLayout from "./components/layout/AppLayout"
 import { ThemeProvider } from "@/components/theme-provider";
+import { FilterProvider } from "@/components/Filter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
