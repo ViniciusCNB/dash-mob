@@ -1,49 +1,105 @@
-import { useMemo, useRef } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import * as d3 from "d3";
 import styles from "./pie-chart.module.css";
 
-type DataItem = {
+export type PieChartDataItem = {
   name: string;
   value: number;
-};
-type PieChartProps = {
-  width: number;
-  height: number;
-  data: DataItem[];
+  id?: number;
+  fullName?: string;
 };
 
-const MARGIN_X = 150;
-const MARGIN_Y = 50;
-const INFLEXION_PADDING = 20; // space between donut and label inflexion point
+type PieChartProps = {
+  data: PieChartDataItem[];
+  valueLabel?: string;
+};
+
+const MARGIN_X = 100;
+const MARGIN_Y = 40;
+const INFLEXION_PADDING = 20;
 
 const colors = [
-  "#e0ac2b",
-  "#e85252",
-  "#6689c6",
-  "#9a6fb0",
-  "#a53253",
-  "#69b3a2",
+  "#6366f1",
+  "#8b5cf6",
+  "#06b6d4",
+  "#10b981",
+  "#f59e0b",
+  "#ef4444",
+  "#ec4899",
+  "#84cc16",
+  "#f97316",
+  "#6d28d9",
+  "#059669",
+  "#dc2626",
 ];
 
-export const PieChart = ({ width, height, data }: PieChartProps) => {
-  const ref = useRef(null);
+// Função para formatar números grandes
+const formatValue = (value: number): string => {
+  if (value >= 1000000) {
+    return `${(value / 1000000).toFixed(1)}M`;
+  } else if (value >= 1000) {
+    return `${(value / 1000).toFixed(1)}K`;
+  }
+  return value.toLocaleString("pt-BR");
+};
 
+// Função para formatar valor completo
+const formatFullValue = (value: number): string => {
+  return value.toLocaleString("pt-BR");
+};
+
+export const PieChart = ({ data, valueLabel = "Quantidade" }: PieChartProps) => {
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [dimensions, setDimensions] = useState({ width: 400, height: 300 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const { offsetWidth, offsetHeight } = containerRef.current;
+        setDimensions({
+          width: offsetWidth || 400,
+          height: offsetHeight || 300,
+        });
+      }
+    };
+
+    updateDimensions();
+    window.addEventListener("resize", updateDimensions);
+
+    return () => window.removeEventListener("resize", updateDimensions);
+  }, []);
+
+  const { width, height } = dimensions;
   const radius = Math.min(width - 2 * MARGIN_X, height - 2 * MARGIN_Y) / 2;
 
   const pie = useMemo(() => {
-    const pieGenerator = d3.pie<unknown, DataItem>().value((d) => d.value);
+    const pieGenerator = d3.pie<unknown, PieChartDataItem>().value((d) => d.value);
     return pieGenerator(data);
   }, [data]);
 
   const arcGenerator = d3.arc();
 
+  const handleMouseMove = (event: React.MouseEvent) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setMousePos({
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    });
+  };
+
   const shapes = pie.map((grp, i) => {
+    const isHovered = hoveredIndex === i;
+    const outerRadius = isHovered ? radius + 5 : radius;
+
     const sliceInfo = {
       innerRadius: 0,
-      outerRadius: radius,
+      outerRadius: outerRadius,
       startAngle: grp.startAngle,
       endAngle: grp.endAngle,
     };
+
     const centroid = arcGenerator.centroid(sliceInfo);
     const slicePath = arcGenerator(sliceInfo);
 
@@ -56,50 +112,64 @@ export const PieChart = ({ width, height, data }: PieChartProps) => {
     const inflexionPoint = arcGenerator.centroid(inflexionInfo);
 
     const isRightLabel = inflexionPoint[0] > 0;
-    const labelPosX = inflexionPoint[0] + 50 * (isRightLabel ? 1 : -1);
+    const labelPosX = inflexionPoint[0] + 40 * (isRightLabel ? 1 : -1);
     const textAnchor = isRightLabel ? "start" : "end";
-    const label = grp.data.name + " (" + grp.value + ")";
+
+    // Label mais limpo
+    const label = `${grp.data.name} (${formatValue(grp.data.value)})`;
 
     return (
       <g
         key={i}
         className={styles.slice}
-        onMouseEnter={() => {
-          if (ref.current) {
-            (ref.current as HTMLElement).classList.add(styles.hasHighlight);
-          }
-        }}
-        onMouseLeave={() => {
-          if (ref.current) {
-            (ref.current as HTMLElement).classList.remove(styles.hasHighlight);
-          }
-        }}
+        style={{ cursor: "pointer" }}
+        onMouseEnter={() => setHoveredIndex(i)}
+        onMouseLeave={() => setHoveredIndex(null)}
+        onMouseMove={handleMouseMove}
       >
-        <path d={slicePath || ''} fill={colors[i] || ''} />
-        <circle cx={centroid[0]} cy={centroid[1]} r={2} fill={"var(--primary)"} />
+        <path
+          d={slicePath || ""}
+          fill={colors[i % colors.length] || colors[0]}
+          stroke="white"
+          strokeWidth={2}
+          style={{
+            transition: "all 0.2s ease-in-out",
+            filter: isHovered ? "brightness(1.1)" : "none",
+          }}
+        />
+
+        {/* Ponto central */}
+        <circle cx={centroid[0]} cy={centroid[1]} r={2} fill="hsl(var(--foreground))" />
+
+        {/* Linha de conexão */}
         <line
           x1={centroid[0]}
           y1={centroid[1]}
           x2={inflexionPoint[0]}
           y2={inflexionPoint[1]}
-          stroke={"var(--primary)"}
-          fill={"var(--primary)"}
+          stroke="hsl(var(--muted-foreground))"
+          strokeWidth={1}
         />
+
+        {/* Linha horizontal */}
         <line
           x1={inflexionPoint[0]}
           y1={inflexionPoint[1]}
           x2={labelPosX}
           y2={inflexionPoint[1]}
-          stroke={"var(--primary)"}
-          fill={"var(--primary)"}
+          stroke="hsl(var(--muted-foreground))"
+          strokeWidth={1}
         />
+
+        {/* Label */}
         <text
           x={labelPosX + (isRightLabel ? 2 : -2)}
           y={inflexionPoint[1]}
           textAnchor={textAnchor}
           dominantBaseline="middle"
-          fontSize={14}
-          fill={"var(--primary)"}
+          fontSize={12}
+          fill="hsl(var(--foreground))"
+          fontWeight="500"
         >
           {label}
         </text>
@@ -108,14 +178,42 @@ export const PieChart = ({ width, height, data }: PieChartProps) => {
   });
 
   return (
-    <svg width={width} height={height} style={{ display: "inline-block" }}>
-      <g
-        transform={`translate(${width / 2}, ${height / 2})`}
-        className={styles.container}
-        ref={ref}
-      >
-        {shapes}
-      </g>
-    </svg>
+    <div ref={containerRef} className="relative w-full h-full">
+      <svg width={width} height={height} className="overflow-visible">
+        <g transform={`translate(${width / 2}, ${height / 2})`} className={styles.container}>
+          {shapes}
+        </g>
+      </svg>
+
+      {/* Tooltip */}
+      {hoveredIndex !== null && (
+        <div
+          className="absolute z-10 bg-popover border border-border rounded-lg shadow-lg p-3 text-sm pointer-events-none"
+          style={{
+            left: Math.min(mousePos.x + 10, width - 200),
+            top: Math.max(mousePos.y - 80, 10),
+            minWidth: "180px",
+          }}
+        >
+          <div className="space-y-1">
+            <div className="font-semibold text-foreground">{pie[hoveredIndex].data.name}</div>
+            {pie[hoveredIndex].data.fullName && (
+              <div className="text-muted-foreground text-xs">{pie[hoveredIndex].data.fullName}</div>
+            )}
+            <div className="text-foreground">
+              <span className="text-muted-foreground">{valueLabel}:</span>{" "}
+              <span className="font-medium">{formatFullValue(pie[hoveredIndex].data.value)}</span>
+            </div>
+            <div className="text-muted-foreground text-xs">
+              Porcentagem:{" "}
+              {((pie[hoveredIndex].data.value / data.reduce((sum, d) => sum + d.value, 0)) * 100).toFixed(1)}%
+            </div>
+            {pie[hoveredIndex].data.id && (
+              <div className="text-muted-foreground text-xs">ID: {pie[hoveredIndex].data.id}</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
