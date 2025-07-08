@@ -56,6 +56,42 @@ export interface GeoJSONFeatureCollection {
   features: GeoJSONPointFeature[];
 }
 
+// Interface para dados de eficiência
+export interface EficienciaLinha {
+  id_linha: number;
+  cod_linha: string;
+  nome_linha: string | null;
+  passageiros_por_km: number;
+  passageiros_por_minuto: number;
+  total_passageiros: number;
+}
+
+// Interfaces para dados de falhas mecânicas
+export interface TaxaFalhasEmpresa {
+  id_empresa: number;
+  nome_empresa: string;
+  taxa_falhas_por_10k_viagens: number;
+}
+
+export interface FalhaPorJustificativa {
+  nome_justificativa: string;
+  total_falhas: number;
+}
+
+export interface CorrelacaoIdadeFalha {
+  id_veiculo: number;
+  idade_veiculo_anos: number;
+  total_falhas: number;
+  nome_empresa: string;
+}
+
+export interface RankingLinhasFalhas {
+  id_linha: number;
+  cod_linha: string;
+  nome_linha: string | null;
+  total_falhas: number;
+}
+
 // Funções de fetch
 const fetchKpis = async (dataInicio: string, dataFim: string): Promise<KpiGeral> => {
   const response = await fetch(`/api/v1/geral/kpis?data_inicio=${dataInicio}&data_fim=${dataFim}`);
@@ -116,6 +152,54 @@ const fetchPontosLinha = async (codLinha: string): Promise<GeoJSONFeatureCollect
   const response = await fetch(`/api/v1/linhas/${codLinha}/pontos/geolocalizacao`);
   if (!response.ok) {
     throw new Error(`Erro ao buscar pontos da linha ${codLinha}`);
+  }
+  return response.json();
+};
+
+const fetchLinhasParaFiltro = async (): Promise<LinhaParaFiltro[]> => {
+  const response = await fetch("/api/v1/linhas/");
+  if (!response.ok) {
+    throw new Error("Erro ao buscar linhas para filtro");
+  }
+  return response.json();
+};
+
+const fetchEficiencia = async (dataInicio: string, dataFim: string): Promise<EficienciaLinha[]> => {
+  const response = await fetch(`/api/v1/estudos/analise-eficiencia?data_inicio=${dataInicio}&data_fim=${dataFim}`);
+  if (!response.ok) {
+    throw new Error("Erro ao buscar dados de eficiência");
+  }
+  return response.json();
+};
+
+const fetchTaxaFalhasEmpresa = async (dataInicio: string, dataFim: string): Promise<TaxaFalhasEmpresa[]> => {
+  const response = await fetch(`/api/v1/estudos/falhas-mecanicas/taxa-por-empresa?data_inicio=${dataInicio}&data_fim=${dataFim}`);
+  if (!response.ok) {
+    throw new Error("Erro ao buscar taxa de falhas por empresa");
+  }
+  return response.json();
+};
+
+const fetchJustificativasFalhas = async (dataInicio: string, dataFim: string): Promise<FalhaPorJustificativa[]> => {
+  const response = await fetch(`/api/v1/estudos/falhas-mecanicas/ranking-justificativas?data_inicio=${dataInicio}&data_fim=${dataFim}`);
+  if (!response.ok) {
+    throw new Error("Erro ao buscar justificativas de falhas");
+  }
+  return response.json();
+};
+
+const fetchCorrelacaoIdadeFalhas = async (dataInicio: string, dataFim: string): Promise<CorrelacaoIdadeFalha[]> => {
+  const response = await fetch(`/api/v1/estudos/falhas-mecanicas/correlacao-idade-veiculo?data_inicio=${dataInicio}&data_fim=${dataFim}`);
+  if (!response.ok) {
+    throw new Error("Erro ao buscar correlação idade-falhas");
+  }
+  return response.json();
+};
+
+const fetchRankingLinhasFalhas = async (dataInicio: string, dataFim: string): Promise<RankingLinhasFalhas[]> => {
+  const response = await fetch(`/api/v1/estudos/falhas-mecanicas/ranking-linhas?data_inicio=${dataInicio}&data_fim=${dataFim}`);
+  if (!response.ok) {
+    throw new Error("Erro ao buscar ranking de linhas por falhas");
   }
   return response.json();
 };
@@ -273,5 +357,118 @@ export const useMultiplasLinhasPontos = (codigosLinhas: string[]) => {
       } as GeoJSONFeatureCollection;
     },
     enabled: codigosLinhas.length > 0,
+  });
+};
+
+export const useEficienciaData = () => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  return useQuery({
+    queryKey: [
+      "eficiencia",
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!appliedStartDate || !appliedEndDate) {
+        throw new Error("Datas não definidas");
+      }
+      return fetchEficiencia(formatDate(appliedStartDate), formatDate(appliedEndDate));
+    },
+    enabled: !!(appliedStartDate && appliedEndDate),
+  });
+};
+
+export const useTaxaFalhasEmpresa = () => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  return useQuery({
+    queryKey: [
+      "taxa-falhas-empresa",
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!appliedStartDate || !appliedEndDate) {
+        throw new Error("Datas não definidas");
+      }
+      return fetchTaxaFalhasEmpresa(formatDate(appliedStartDate), formatDate(appliedEndDate));
+    },
+    enabled: !!(appliedStartDate && appliedEndDate),
+  });
+};
+
+export const useJustificativasFalhas = () => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  return useQuery({
+    queryKey: [
+      "justificativas-falhas",
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!appliedStartDate || !appliedEndDate) {
+        throw new Error("Datas não definidas");
+      }
+      return fetchJustificativasFalhas(formatDate(appliedStartDate), formatDate(appliedEndDate));
+    },
+    enabled: !!(appliedStartDate && appliedEndDate),
+  });
+};
+
+export const useCorrelacaoIdadeFalhas = () => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  return useQuery({
+    queryKey: [
+      "correlacao-idade-falhas",
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!appliedStartDate || !appliedEndDate) {
+        throw new Error("Datas não definidas");
+      }
+      return fetchCorrelacaoIdadeFalhas(formatDate(appliedStartDate), formatDate(appliedEndDate));
+    },
+    enabled: !!(appliedStartDate && appliedEndDate),
+  });
+};
+
+export const useRankingLinhasFalhas = () => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  return useQuery({
+    queryKey: [
+      "ranking-linhas-falhas",
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!appliedStartDate || !appliedEndDate) {
+        throw new Error("Datas não definidas");
+      }
+      return fetchRankingLinhasFalhas(formatDate(appliedStartDate), formatDate(appliedEndDate));
+    },
+    enabled: !!(appliedStartDate && appliedEndDate),
+  });
+};
+
+export const useLinhasParaFiltro = () => {
+  return useQuery({
+    queryKey: ["linhas-para-filtro"],
+    queryFn: fetchLinhasParaFiltro,
+    staleTime: 5 * 60 * 1000, // 5 minutos - dados de linhas não mudam frequentemente
   });
 };

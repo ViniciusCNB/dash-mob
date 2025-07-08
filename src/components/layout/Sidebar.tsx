@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Warehouse, Route, Bus, Store, Building2, Pin, FilePen, Globe, ChartLine } from "lucide-react";
+import { ChevronLeft, ChevronRight, Warehouse, Route, Bus, Store, Building2, Pin, FilePen, Globe, ChartLine, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -49,6 +49,18 @@ const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
       path: "/empresas",
     },
   ];
+  const studiesItems = [
+    {
+      title: "Eficiência das Linhas",
+      icon: ChartLine,
+      path: "/eficiencia-das-linhas",
+    },
+    {
+      title: "Falhas Mecânicas",
+      icon: Wrench,
+      path: "/falhas-mecanicas",
+    },
+  ];
   return (
     <div
       className={cn(
@@ -96,6 +108,24 @@ const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
         <div className="flex flex-col gap-1">
           <div className="text-sm font-medium">{isCollapsed ? "Tem." : "Temas"}</div>
           {menuItems.map((item) => (
+            <Link to={item.path} key={item.path}>
+              <Button
+                variant={location.pathname === item.path ? "secondary" : "ghost"}
+                className={cn(
+                  "w-full justify-start gap-2 cursor-pointer",
+                  location.pathname === item.path && "bg-secondary",
+                  isCollapsed && "justify-center px-2"
+                )}
+              >
+                <item.icon className="h-5 w-5" />
+                {!isCollapsed && item.title}
+              </Button>
+            </Link>
+          ))}
+        </div>
+        <div className="flex flex-col gap-1">
+          <div className="text-sm font-medium">{isCollapsed ? "Est." : "Estudos de Caso"}</div>
+          {studiesItems.map((item) => (
             <Link to={item.path} key={item.path}>
               <Button
                 variant={location.pathname === item.path ? "secondary" : "ghost"}
