@@ -9,6 +9,12 @@ export interface RankingItem {
   valor: number;
 }
 
+export interface LinhaParaFiltro {
+  id_linha: number;
+  cod_linha: string;
+  nome_linha: string | null;
+}
+
 export interface RankingResponse {
   metrica: string;
   ranking: RankingItem[];
@@ -105,7 +111,8 @@ const fetchRanking = async (
   metrica: "viagens" | "passageiros" | "ocorrencias",
   dataInicio: string,
   dataFim: string,
-  limit = 10
+  limit = 10,
+  linhasSelecionadas?: LinhaParaFiltro[]
 ): Promise<RankingResponse> => {
   const response = await fetch(
     `/api/v1/linhas/ranking/${metrica}?data_inicio=${dataInicio}&data_fim=${dataFim}&limit=${limit}`
@@ -113,7 +120,18 @@ const fetchRanking = async (
   if (!response.ok) {
     throw new Error(`Erro ao buscar ranking de ${metrica}`);
   }
-  return response.json();
+  
+  const data = await response.json();
+  
+  // Se há linhas selecionadas, filtrar apenas essas linhas
+  if (linhasSelecionadas && linhasSelecionadas.length > 0) {
+    const codigosLinhasSelecionadas = linhasSelecionadas.map(l => l.cod_linha);
+    data.ranking = data.ranking.filter((item: RankingItem) => 
+      codigosLinhasSelecionadas.includes(item.codigo)
+    );
+  }
+  
+  return data;
 };
 
 const fetchContagemPontos = async (limit = 10): Promise<RankingResponse> => {
@@ -227,7 +245,7 @@ export const useKpisData = () => {
 };
 
 export const useViagensData = () => {
-  const { appliedStartDate, appliedEndDate } = useFilter();
+  const { appliedStartDate, appliedEndDate, appliedLinhas } = useFilter();
 
   const formatDate = (date: Date) => date.toISOString().split("T")[0];
 
@@ -236,19 +254,20 @@ export const useViagensData = () => {
       "ranking-viagens",
       appliedStartDate ? formatDate(appliedStartDate) : null,
       appliedEndDate ? formatDate(appliedEndDate) : null,
+      appliedLinhas.map(l => l.id_linha).sort()
     ],
     queryFn: () => {
       if (!appliedStartDate || !appliedEndDate) {
         throw new Error("Datas não definidas");
       }
-      return fetchRanking("viagens", formatDate(appliedStartDate), formatDate(appliedEndDate));
+      return fetchRanking("viagens", formatDate(appliedStartDate), formatDate(appliedEndDate), 50, appliedLinhas);
     },
     enabled: !!(appliedStartDate && appliedEndDate),
   });
 };
 
 export const usePassageirosData = () => {
-  const { appliedStartDate, appliedEndDate } = useFilter();
+  const { appliedStartDate, appliedEndDate, appliedLinhas } = useFilter();
 
   const formatDate = (date: Date) => date.toISOString().split("T")[0];
 
@@ -257,19 +276,20 @@ export const usePassageirosData = () => {
       "ranking-passageiros",
       appliedStartDate ? formatDate(appliedStartDate) : null,
       appliedEndDate ? formatDate(appliedEndDate) : null,
+      appliedLinhas.map(l => l.id_linha).sort()
     ],
     queryFn: () => {
       if (!appliedStartDate || !appliedEndDate) {
         throw new Error("Datas não definidas");
       }
-      return fetchRanking("passageiros", formatDate(appliedStartDate), formatDate(appliedEndDate));
+      return fetchRanking("passageiros", formatDate(appliedStartDate), formatDate(appliedEndDate), 50, appliedLinhas);
     },
     enabled: !!(appliedStartDate && appliedEndDate),
   });
 };
 
 export const useOcorrenciasData = () => {
-  const { appliedStartDate, appliedEndDate } = useFilter();
+  const { appliedStartDate, appliedEndDate, appliedLinhas } = useFilter();
 
   const formatDate = (date: Date) => date.toISOString().split("T")[0];
 
@@ -278,12 +298,13 @@ export const useOcorrenciasData = () => {
       "ranking-ocorrencias",
       appliedStartDate ? formatDate(appliedStartDate) : null,
       appliedEndDate ? formatDate(appliedEndDate) : null,
+      appliedLinhas.map(l => l.id_linha).sort()
     ],
     queryFn: () => {
       if (!appliedStartDate || !appliedEndDate) {
         throw new Error("Datas não definidas");
       }
-      return fetchRanking("ocorrencias", formatDate(appliedStartDate), formatDate(appliedEndDate));
+      return fetchRanking("ocorrencias", formatDate(appliedStartDate), formatDate(appliedEndDate), 50, appliedLinhas);
     },
     enabled: !!(appliedStartDate && appliedEndDate),
   });

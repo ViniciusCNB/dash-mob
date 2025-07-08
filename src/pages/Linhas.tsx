@@ -10,10 +10,12 @@ import {
   useMultiplasLinhasPontos,
   RankingItem,
 } from "@/hooks/useApiQueries";
+import { useFilter } from "@/components/Filter";
 import { useState } from "react";
 
 const Linhas = () => {
   const [selectedLine, setSelectedLine] = useState<string>("");
+  const { appliedLinhas } = useFilter();
 
   // Usar todos os hooks do TanStack Query
   const viagens = useViagensData();
@@ -24,9 +26,14 @@ const Linhas = () => {
   // const concessionaria = useConcessionariaData();
   // const empresa = useEmpresaData();
 
-  // Obter códigos das top 10 linhas para o mapa (usando dados de viagens)
-  const codigosTopLinhas = viagens.data?.ranking.slice(0, 10).map((item) => item.codigo) || [];
-  const pontosData = useMultiplasLinhasPontos(codigosTopLinhas);
+  // Obter códigos das linhas para o mapa
+  // Se há linhas filtradas, usar essas linhas. Senão, usar as top 10
+  const codigosLinhasParaMapa =
+    appliedLinhas.length > 0
+      ? appliedLinhas.map((linha) => linha.cod_linha)
+      : viagens.data?.ranking.slice(0, 10).map((item) => item.codigo) || [];
+
+  const pontosData = useMultiplasLinhasPontos(codigosLinhasParaMapa);
 
   // Verificar se algum está carregando
   const loading =
@@ -100,12 +107,14 @@ const Linhas = () => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
-      {/* Mapa das Top 10 Linhas */}
+      {/* Mapa das Linhas */}
       <Card className="col-span-full">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="text-muted-foreground text-center">
-              Pontos de Parada das Top 10 Linhas (por Viagens)
+              {appliedLinhas.length > 0
+                ? `Pontos de Parada das ${appliedLinhas.length} Linhas Selecionadas`
+                : "Pontos de Parada das Top 10 Linhas (por Viagens)"}
             </CardTitle>
             {selectedLine && (
               <div className="flex items-center gap-2">
@@ -134,7 +143,9 @@ const Linhas = () => {
             )}
             {pontosData.data && pontosData.data.features && pontosData.data.features.length === 0 && (
               <div className="flex items-center justify-center h-full text-gray-500">
-                Nenhum ponto de parada disponível para as linhas selecionadas
+                {appliedLinhas.length > 0
+                  ? "Nenhum ponto de parada disponível para as linhas selecionadas"
+                  : "Nenhum ponto de parada disponível para as top 10 linhas"}
               </div>
             )}
           </div>
@@ -202,7 +213,9 @@ const Linhas = () => {
       {/* Quantidade de viagens por linha */}
       <Card className="col-span-1">
         <CardHeader>
-          <CardTitle className="text-muted-foreground text-center text-lg">Viagens por Linha</CardTitle>
+          <CardTitle className="text-muted-foreground text-center text-lg">
+            {appliedLinhas.length > 0 ? "Viagens por Linha (Filtradas)" : "Viagens por Linha"}
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-2">
           <div className="w-full h-80">
@@ -214,7 +227,9 @@ const Linhas = () => {
       {/* Quantidade de passageiros por linha */}
       <Card className="col-span-1">
         <CardHeader>
-          <CardTitle className="text-muted-foreground text-center ">Passageiros por Linha</CardTitle>
+          <CardTitle className="text-muted-foreground text-center ">
+            {appliedLinhas.length > 0 ? "Passageiros por Linha (Filtradas)" : "Passageiros por Linha"}
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-2">
           <div className="w-full h-80">
@@ -228,7 +243,9 @@ const Linhas = () => {
       {/* Quantidade de ocorrências por linha */}
       <Card className="col-span-1">
         <CardHeader>
-          <CardTitle className="text-muted-foreground text-center ">Ocorrências por Linha</CardTitle>
+          <CardTitle className="text-muted-foreground text-center ">
+            {appliedLinhas.length > 0 ? "Ocorrências por Linha (Filtradas)" : "Ocorrências por Linha"}
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-2">
           <div className="w-full h-80">
@@ -242,7 +259,9 @@ const Linhas = () => {
       {/* Quantidade de pontos por linha */}
       <Card className="col-span-1">
         <CardHeader>
-          <CardTitle className="text-muted-foreground text-center ">Pontos de Parada por Linha</CardTitle>
+          <CardTitle className="text-muted-foreground text-center ">
+            {appliedLinhas.length > 0 ? "Pontos de Parada por Linha (Filtradas)" : "Pontos de Parada por Linha"}
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-2">
           <div className="w-full h-80">

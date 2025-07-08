@@ -1,20 +1,25 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FilterIcon, CalendarIcon } from "lucide-react";
+import { FilterIcon, CalendarIcon, X, ChevronDown, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Badge } from "@/components/ui/badge";
+import { useLinhasParaFiltro, LinhaParaFiltro } from "@/hooks/useApiQueries";
 
-// Contexto para gerenciar o filtro de período
+// Contexto para gerenciar o filtro de período e linhas
 interface FilterContextType {
   startDate: Date | undefined;
   endDate: Date | undefined;
   appliedStartDate: Date | undefined;
   appliedEndDate: Date | undefined;
+  selectedLinhas: LinhaParaFiltro[];
+  appliedLinhas: LinhaParaFiltro[];
   setStartDate: (date: Date | undefined) => void;
   setEndDate: (date: Date | undefined) => void;
+  setSelectedLinhas: (linhas: LinhaParaFiltro[]) => void;
   applyFilters: () => void;
 }
 
@@ -37,10 +42,13 @@ export const FilterProvider = ({ children }: FilterProviderProps) => {
   const [endDate, setEndDate] = useState<Date | undefined>(new Date("2024-12-31"));
   const [appliedStartDate, setAppliedStartDate] = useState<Date | undefined>(new Date("2024-01-01"));
   const [appliedEndDate, setAppliedEndDate] = useState<Date | undefined>(new Date("2024-12-31"));
+  const [selectedLinhas, setSelectedLinhas] = useState<LinhaParaFiltro[]>([]);
+  const [appliedLinhas, setAppliedLinhas] = useState<LinhaParaFiltro[]>([]);
 
   const applyFilters = () => {
     setAppliedStartDate(startDate);
     setAppliedEndDate(endDate);
+    setAppliedLinhas(selectedLinhas);
   };
 
   return (
@@ -50,8 +58,11 @@ export const FilterProvider = ({ children }: FilterProviderProps) => {
         endDate,
         appliedStartDate,
         appliedEndDate,
+        selectedLinhas,
+        appliedLinhas,
         setStartDate,
         setEndDate,
+        setSelectedLinhas,
         applyFilters,
       }}
     >
@@ -61,11 +72,16 @@ export const FilterProvider = ({ children }: FilterProviderProps) => {
 };
 
 const Filter = () => {
-  const { startDate, endDate, setStartDate, setEndDate, applyFilters } = useFilter();
+  const { startDate, endDate, setStartDate, setEndDate, selectedLinhas, setSelectedLinhas, applyFilters } = useFilter();
   const [open, setOpen] = useState(false);
   const [open2, setOpen2] = useState(false);
   const [startValue, setStartValue] = useState(formatDate(startDate));
   const [endValue, setEndValue] = useState(formatDate(endDate));
+  const [linhaSelectOpen, setLinhaSelectOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Buscar linhas da API
+  const { data: linhasData, isLoading: isLoadingLinhas } = useLinhasParaFiltro();
 
   // Limites de data
   const minDate = new Date("2015-01-01");
@@ -104,6 +120,56 @@ const Filter = () => {
     return !isNaN(date.getTime()) && date >= minDate && date <= maxDate;
   }
 
+  // Funções para manipular seleção de linhas
+  const handleLinhaSelect = (linha: LinhaParaFiltro) => {
+    const isAlreadySelected = selectedLinhas.some((l) => l.id_linha === linha.id_linha);
+
+    if (isAlreadySelected) {
+      // Remove a linha se já estiver selecionada
+      setSelectedLinhas(selectedLinhas.filter((l) => l.id_linha !== linha.id_linha));
+    } else {
+      // Adiciona a linha se não estiver selecionada
+      setSelectedLinhas([...selectedLinhas, linha]);
+    }
+  };
+
+  const formatLinhaDisplay = (linha: LinhaParaFiltro) => {
+    return linha.nome_linha ? `${linha.cod_linha} - ${linha.nome_linha}` : linha.cod_linha;
+  };
+
+  // Filtrar linhas baseado no termo de pesquisa
+  const getFilteredLinhas = () => {
+    if (!linhasData) return [];
+
+    const filtered = linhasData.filter((linha) => {
+      const searchLower = searchTerm.toLowerCase();
+      const codigoMatch = linha.cod_linha.toLowerCase().includes(searchLower);
+      const nomeMatch = linha.nome_linha?.toLowerCase().includes(searchLower);
+      return codigoMatch || nomeMatch;
+    });
+
+    // Ordenar: selecionadas primeiro, depois as não selecionadas
+    return filtered.sort((a, b) => {
+      const aSelected = selectedLinhas.some((l) => l.id_linha === a.id_linha);
+      const bSelected = selectedLinhas.some((l) => l.id_linha === b.id_linha);
+
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
+
+      // Se ambas têm o mesmo status de seleção, ordenar por código
+      return a.cod_linha.localeCompare(b.cod_linha);
+    });
+  };
+
+  const getDisplayText = () => {
+    if (selectedLinhas.length === 0) {
+      return "Todas as linhas";
+    }
+    return `${selectedLinhas.length} linha${selectedLinhas.length > 1 ? "s" : ""} selecionada${
+      selectedLinhas.length > 1 ? "s" : ""
+    }`;
+  };
+
   return (
     <div className="flex flex-row gap-4 p-6 pb-0 w-full">
       <div className="bg-muted-foreground/5 p-4 px-6 rounded-lg w-full flex flex-row gap-6 justify-between items-end">
@@ -113,14 +179,68 @@ const Filter = () => {
         </div>
         <div className="flex flex-col gap-1 w-full">
           <div className="text-sm font-medium">Linha</div>
-          <Select>
-            <SelectTrigger className="w-full bg-background">
-              <SelectValue placeholder="Linha" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="3501">3501</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <Popover open={linhaSelectOpen} onOpenChange={setLinhaSelectOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={linhaSelectOpen}
+                  className="w-full justify-between bg-background"
+                >
+                  {getDisplayText()}
+                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[400px] p-0">
+                <div className="flex items-center border-b px-3 py-2">
+                  <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                  <Input
+                    placeholder="Pesquisar linha..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="border-0 shadow-none focus-visible:ring-0 h-8"
+                  />
+                </div>
+                <div className="max-h-60 overflow-y-auto">
+                  {isLoadingLinhas ? (
+                    <div className="p-4 text-center text-sm text-muted-foreground">Carregando linhas...</div>
+                  ) : getFilteredLinhas().length > 0 ? (
+                    <div className="space-y-1 p-2">
+                      {getFilteredLinhas().map((linha) => (
+                        <div
+                          key={linha.id_linha}
+                          className={`flex items-center space-x-2 p-2 rounded-md cursor-pointer hover:bg-accent ${
+                            selectedLinhas.some((l) => l.id_linha === linha.id_linha) ? "bg-accent" : ""
+                          }`}
+                          onClick={() => handleLinhaSelect(linha)}
+                        >
+                          <div
+                            className={`w-4 h-4 border-2 rounded-sm ${
+                              selectedLinhas.some((l) => l.id_linha === linha.id_linha)
+                                ? "bg-primary border-primary"
+                                : "border-gray-300"
+                            }`}
+                          >
+                            {selectedLinhas.some((l) => l.id_linha === linha.id_linha) && (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <div className="w-2 h-2 bg-white rounded-sm" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 text-sm">{formatLinhaDisplay(linha)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      {searchTerm ? "Nenhuma linha encontrada" : "Nenhuma linha disponível"}
+                    </div>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
         <div className="flex flex-col gap-1 w-full">
           <div className="text-sm font-medium">Bairro</div>
