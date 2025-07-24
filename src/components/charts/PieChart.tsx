@@ -14,9 +14,9 @@ type PieChartProps = {
   valueLabel?: string;
 };
 
-const MARGIN_X = 100;
-const MARGIN_Y = 40;
-const INFLEXION_PADDING = 20;
+const MARGIN_X = 80;
+const MARGIN_Y = 30;
+const INFLEXION_PADDING = 15;
 
 const colors = [
   "#6366f1",
@@ -112,11 +112,14 @@ export const PieChart = ({ data, valueLabel = "Quantidade" }: PieChartProps) => 
     const inflexionPoint = arcGenerator.centroid(inflexionInfo);
 
     const isRightLabel = inflexionPoint[0] > 0;
-    const labelPosX = inflexionPoint[0] + 40 * (isRightLabel ? 1 : -1);
+    const labelPosX = inflexionPoint[0] + 30 * (isRightLabel ? 1 : -1);
     const textAnchor = isRightLabel ? "start" : "end";
 
-    // Label mais limpo
-    const label = `${grp.data.name} (${formatValue(grp.data.value)})`;
+    // Label mais limpo e com truncamento se necessário
+    const maxLabelLength = 20;
+    const truncatedName =
+      grp.data.name.length > maxLabelLength ? `${grp.data.name.substring(0, maxLabelLength)}...` : grp.data.name;
+    const label = `${truncatedName} (${formatValue(grp.data.value)})`;
 
     return (
       <g
@@ -139,7 +142,7 @@ export const PieChart = ({ data, valueLabel = "Quantidade" }: PieChartProps) => 
         />
 
         {/* Ponto central */}
-        <circle cx={centroid[0]} cy={centroid[1]} r={2} fill="hsl(var(--foreground))" />
+        <circle cx={centroid[0]} cy={centroid[1]} r={2} fill="var(--foreground)" />
 
         {/* Linha de conexão */}
         <line
@@ -147,7 +150,7 @@ export const PieChart = ({ data, valueLabel = "Quantidade" }: PieChartProps) => 
           y1={centroid[1]}
           x2={inflexionPoint[0]}
           y2={inflexionPoint[1]}
-          stroke="hsl(var(--muted-foreground))"
+          stroke="var(--muted-foreground)"
           strokeWidth={1}
         />
 
@@ -157,7 +160,7 @@ export const PieChart = ({ data, valueLabel = "Quantidade" }: PieChartProps) => 
           y1={inflexionPoint[1]}
           x2={labelPosX}
           y2={inflexionPoint[1]}
-          stroke="hsl(var(--muted-foreground))"
+          stroke="var(--muted-foreground)"
           strokeWidth={1}
         />
 
@@ -168,7 +171,7 @@ export const PieChart = ({ data, valueLabel = "Quantidade" }: PieChartProps) => 
           textAnchor={textAnchor}
           dominantBaseline="middle"
           fontSize={12}
-          fill="hsl(var(--foreground))"
+          fill="var(--foreground)"
           fontWeight="500"
         >
           {label}
@@ -179,7 +182,7 @@ export const PieChart = ({ data, valueLabel = "Quantidade" }: PieChartProps) => 
 
   return (
     <div ref={containerRef} className="relative w-full h-full">
-      <svg width={width} height={height} className="overflow-visible">
+      <svg width={width} height={height} className="overflow-hidden">
         <g transform={`translate(${width / 2}, ${height / 2})`} className={styles.container}>
           {shapes}
         </g>
