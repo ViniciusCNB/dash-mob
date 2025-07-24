@@ -33,10 +33,10 @@ export interface KpiGeral {
   eficiencia_passageiro_km: number;
 }
 
-// Interface para dados de geolocalização
+// Interface para dados de geolocalização genérica
 export interface GeoJSONGeometry {
   type: string;
-  coordinates: number[][];
+  coordinates: number[] | number[][] | number[][][] | number[][][][]; // Point, LineString, Polygon, MultiPolygon
 }
 
 export interface GeoJSONFeature {
@@ -60,6 +60,12 @@ export interface GeoJSONPointFeature {
 export interface GeoJSONFeatureCollection {
   type: string;
   features: GeoJSONPointFeature[];
+}
+
+// Interface específica para polígonos (bairros)
+export interface GeoJSONPolygonFeatureCollection {
+  type: string;
+  features: GeoJSONFeature[];
 }
 
 // Interface para dados de eficiência
@@ -98,6 +104,25 @@ export interface RankingLinhasFalhas {
   total_falhas: number;
 }
 
+// Novas interfaces para o dashboard de linha individual
+export interface StatItem {
+  label: string;
+  value: number | string;
+}
+
+export interface ChartDataItem {
+  category: string;
+  value: number;
+}
+
+export interface LinhaDashboardResponse {
+  estatisticas_detalhadas: StatItem[];
+  grafico_justificativas: ChartDataItem[];
+  grafico_media_passageiros_dia_semana: ChartDataItem[];
+  mapa_pontos: GeoJSONFeatureCollection;
+  mapa_bairros: GeoJSONPolygonFeatureCollection;
+}
+
 // Funções de fetch
 const fetchKpis = async (dataInicio: string, dataFim: string): Promise<KpiGeral> => {
   const response = await fetch(`/api/v1/geral/kpis?data_inicio=${dataInicio}&data_fim=${dataFim}`);
@@ -120,26 +145,39 @@ const fetchRanking = async (
   if (!response.ok) {
     throw new Error(`Erro ao buscar ranking de ${metrica}`);
   }
-  
+
   const data = await response.json();
-  
+
   // Se há linhas selecionadas, filtrar apenas essas linhas
   if (linhasSelecionadas && linhasSelecionadas.length > 0) {
-    const codigosLinhasSelecionadas = linhasSelecionadas.map(l => l.cod_linha);
-    data.ranking = data.ranking.filter((item: RankingItem) => 
-      codigosLinhasSelecionadas.includes(item.codigo)
-    );
+    const codigosLinhasSelecionadas = linhasSelecionadas.map((l) => l.cod_linha);
+    data.ranking = data.ranking.filter((item: RankingItem) => codigosLinhasSelecionadas.includes(item.codigo));
   }
-  
+
+  // Sempre limitar a 10 linhas para melhor visualização
+  data.ranking = data.ranking.slice(0, 10);
+
   return data;
 };
 
-const fetchContagemPontos = async (limit = 10): Promise<RankingResponse> => {
+const fetchContagemPontos = async (limit = 10, linhasSelecionadas?: LinhaParaFiltro[]): Promise<RankingResponse> => {
   const response = await fetch(`/api/v1/linhas/contagem-pontos?limit=${limit}`);
   if (!response.ok) {
     throw new Error("Erro ao buscar contagem de pontos");
   }
-  return response.json();
+
+  const data = await response.json();
+
+  // Se há linhas selecionadas, filtrar apenas essas linhas
+  if (linhasSelecionadas && linhasSelecionadas.length > 0) {
+    const codigosLinhasSelecionadas = linhasSelecionadas.map((l) => l.cod_linha);
+    data.ranking = data.ranking.filter((item: RankingItem) => codigosLinhasSelecionadas.includes(item.codigo));
+  }
+
+  // Sempre limitar a 10 linhas para melhor visualização
+  data.ranking = data.ranking.slice(0, 10);
+
+  return data;
 };
 
 const fetchContagemBairro = async (limit = 10): Promise<RankingResponse> => {
@@ -147,7 +185,13 @@ const fetchContagemBairro = async (limit = 10): Promise<RankingResponse> => {
   if (!response.ok) {
     throw new Error("Erro ao buscar contagem por bairro");
   }
-  return response.json();
+
+  const data = await response.json();
+
+  // Sempre limitar a 10 bairros para melhor visualização
+  data.ranking = data.ranking.slice(0, 10);
+
+  return data;
 };
 
 const fetchContagemConcessionaria = async (): Promise<ContagemPorEntidadeItem[]> => {
@@ -191,7 +235,9 @@ const fetchEficiencia = async (dataInicio: string, dataFim: string): Promise<Efi
 };
 
 const fetchTaxaFalhasEmpresa = async (dataInicio: string, dataFim: string): Promise<TaxaFalhasEmpresa[]> => {
-  const response = await fetch(`/api/v1/estudos/falhas-mecanicas/taxa-por-empresa?data_inicio=${dataInicio}&data_fim=${dataFim}`);
+  const response = await fetch(
+    `/api/v1/estudos/falhas-mecanicas/taxa-por-empresa?data_inicio=${dataInicio}&data_fim=${dataFim}`
+  );
   if (!response.ok) {
     throw new Error("Erro ao buscar taxa de falhas por empresa");
   }
@@ -199,7 +245,9 @@ const fetchTaxaFalhasEmpresa = async (dataInicio: string, dataFim: string): Prom
 };
 
 const fetchJustificativasFalhas = async (dataInicio: string, dataFim: string): Promise<FalhaPorJustificativa[]> => {
-  const response = await fetch(`/api/v1/estudos/falhas-mecanicas/ranking-justificativas?data_inicio=${dataInicio}&data_fim=${dataFim}`);
+  const response = await fetch(
+    `/api/v1/estudos/falhas-mecanicas/ranking-justificativas?data_inicio=${dataInicio}&data_fim=${dataFim}`
+  );
   if (!response.ok) {
     throw new Error("Erro ao buscar justificativas de falhas");
   }
@@ -207,7 +255,9 @@ const fetchJustificativasFalhas = async (dataInicio: string, dataFim: string): P
 };
 
 const fetchCorrelacaoIdadeFalhas = async (dataInicio: string, dataFim: string): Promise<CorrelacaoIdadeFalha[]> => {
-  const response = await fetch(`/api/v1/estudos/falhas-mecanicas/correlacao-idade-veiculo?data_inicio=${dataInicio}&data_fim=${dataFim}`);
+  const response = await fetch(
+    `/api/v1/estudos/falhas-mecanicas/correlacao-idade-veiculo?data_inicio=${dataInicio}&data_fim=${dataFim}`
+  );
   if (!response.ok) {
     throw new Error("Erro ao buscar correlação idade-falhas");
   }
@@ -215,9 +265,23 @@ const fetchCorrelacaoIdadeFalhas = async (dataInicio: string, dataFim: string): 
 };
 
 const fetchRankingLinhasFalhas = async (dataInicio: string, dataFim: string): Promise<RankingLinhasFalhas[]> => {
-  const response = await fetch(`/api/v1/estudos/falhas-mecanicas/ranking-linhas?data_inicio=${dataInicio}&data_fim=${dataFim}`);
+  const response = await fetch(
+    `/api/v1/estudos/falhas-mecanicas/ranking-linhas?data_inicio=${dataInicio}&data_fim=${dataFim}`
+  );
   if (!response.ok) {
     throw new Error("Erro ao buscar ranking de linhas por falhas");
+  }
+  return response.json();
+};
+
+const fetchDashboardLinha = async (
+  idLinha: number,
+  dataInicio: string,
+  dataFim: string
+): Promise<LinhaDashboardResponse> => {
+  const response = await fetch(`/api/v1/linhas/${idLinha}/dashboard?data_inicio=${dataInicio}&data_fim=${dataFim}`);
+  if (!response.ok) {
+    throw new Error(`Erro ao buscar dashboard da linha ${idLinha}`);
   }
   return response.json();
 };
@@ -254,13 +318,13 @@ export const useViagensData = () => {
       "ranking-viagens",
       appliedStartDate ? formatDate(appliedStartDate) : null,
       appliedEndDate ? formatDate(appliedEndDate) : null,
-      appliedLinhas.map(l => l.id_linha).sort()
+      appliedLinhas.map((l) => l.id_linha).sort(),
     ],
     queryFn: () => {
       if (!appliedStartDate || !appliedEndDate) {
         throw new Error("Datas não definidas");
       }
-      return fetchRanking("viagens", formatDate(appliedStartDate), formatDate(appliedEndDate), 50, appliedLinhas);
+      return fetchRanking("viagens", formatDate(appliedStartDate), formatDate(appliedEndDate), 10, appliedLinhas);
     },
     enabled: !!(appliedStartDate && appliedEndDate),
   });
@@ -276,13 +340,13 @@ export const usePassageirosData = () => {
       "ranking-passageiros",
       appliedStartDate ? formatDate(appliedStartDate) : null,
       appliedEndDate ? formatDate(appliedEndDate) : null,
-      appliedLinhas.map(l => l.id_linha).sort()
+      appliedLinhas.map((l) => l.id_linha).sort(),
     ],
     queryFn: () => {
       if (!appliedStartDate || !appliedEndDate) {
         throw new Error("Datas não definidas");
       }
-      return fetchRanking("passageiros", formatDate(appliedStartDate), formatDate(appliedEndDate), 50, appliedLinhas);
+      return fetchRanking("passageiros", formatDate(appliedStartDate), formatDate(appliedEndDate), 10, appliedLinhas);
     },
     enabled: !!(appliedStartDate && appliedEndDate),
   });
@@ -298,29 +362,31 @@ export const useOcorrenciasData = () => {
       "ranking-ocorrencias",
       appliedStartDate ? formatDate(appliedStartDate) : null,
       appliedEndDate ? formatDate(appliedEndDate) : null,
-      appliedLinhas.map(l => l.id_linha).sort()
+      appliedLinhas.map((l) => l.id_linha).sort(),
     ],
     queryFn: () => {
       if (!appliedStartDate || !appliedEndDate) {
         throw new Error("Datas não definidas");
       }
-      return fetchRanking("ocorrencias", formatDate(appliedStartDate), formatDate(appliedEndDate), 50, appliedLinhas);
+      return fetchRanking("ocorrencias", formatDate(appliedStartDate), formatDate(appliedEndDate), 10, appliedLinhas);
     },
     enabled: !!(appliedStartDate && appliedEndDate),
   });
 };
 
 export const usePontosData = () => {
+  const { appliedLinhas } = useFilter();
+
   return useQuery({
-    queryKey: ["contagem-pontos"],
-    queryFn: () => fetchContagemPontos(),
+    queryKey: ["contagem-pontos", appliedLinhas.map((l) => l.id_linha).sort()],
+    queryFn: () => fetchContagemPontos(10, appliedLinhas),
   });
 };
 
 export const useBairroData = () => {
   return useQuery({
     queryKey: ["contagem-bairro"],
-    queryFn: () => fetchContagemBairro(),
+    queryFn: () => fetchContagemBairro(10),
   });
 };
 
@@ -491,5 +557,61 @@ export const useLinhasParaFiltro = () => {
     queryKey: ["linhas-para-filtro"],
     queryFn: fetchLinhasParaFiltro,
     staleTime: 5 * 60 * 1000, // 5 minutos - dados de linhas não mudam frequentemente
+  });
+};
+
+export const useDashboardLinha = (idLinha: number) => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  // Usar datas padrão se não houver datas no filtro (últimos 30 dias)
+  const getDefaultDates = () => {
+    const hoje = new Date();
+    const umMesAtras = new Date(hoje);
+    umMesAtras.setDate(hoje.getDate() - 30);
+    return {
+      inicio: formatDate(umMesAtras),
+      fim: formatDate(hoje),
+    };
+  };
+
+  return useQuery({
+    queryKey: [
+      "dashboard-linha",
+      idLinha,
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: async () => {
+      if (!idLinha) {
+        throw new Error("ID da linha não fornecido");
+      }
+
+      const dates =
+        appliedStartDate && appliedEndDate
+          ? { inicio: formatDate(appliedStartDate), fim: formatDate(appliedEndDate) }
+          : getDefaultDates();
+
+      const response = await fetchDashboardLinha(idLinha, dates.inicio, dates.fim);
+
+      // Buscar informações da linha para obter o código
+      const linhasResponse = await fetchLinhasParaFiltro();
+      const linhaInfo = linhasResponse.find((linha) => linha.id_linha === idLinha);
+
+      // Adicionar codLinha nas features do mapa se existir
+      if (response.mapa_pontos?.features && linhaInfo) {
+        response.mapa_pontos.features = response.mapa_pontos.features.map((feature) => ({
+          ...feature,
+          properties: {
+            ...feature.properties,
+            codLinha: linhaInfo.cod_linha,
+          },
+        }));
+      }
+
+      return response;
+    },
+    enabled: !!idLinha,
   });
 };

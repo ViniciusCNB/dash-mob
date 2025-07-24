@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { useLinhasParaFiltro, LinhaParaFiltro } from "@/hooks/useApiQueries";
+import { useLocation } from "react-router";
 
 // Contexto para gerenciar o filtro de período e linhas
 interface FilterContextType {
@@ -21,6 +22,7 @@ interface FilterContextType {
   setEndDate: (date: Date | undefined) => void;
   setSelectedLinhas: (linhas: LinhaParaFiltro[]) => void;
   applyFilters: () => void;
+  clearFilters: () => void;
 }
 
 const FilterContext = createContext<FilterContextType | undefined>(undefined);
@@ -51,6 +53,12 @@ export const FilterProvider = ({ children }: FilterProviderProps) => {
     setAppliedLinhas(selectedLinhas);
   };
 
+  const clearFilters = () => {
+    setStartDate(new Date("2024-01-01"));
+    setEndDate(new Date("2024-12-31"));
+    setSelectedLinhas([]);
+  };
+
   return (
     <FilterContext.Provider
       value={{
@@ -64,6 +72,7 @@ export const FilterProvider = ({ children }: FilterProviderProps) => {
         setEndDate,
         setSelectedLinhas,
         applyFilters,
+        clearFilters,
       }}
     >
       {children}
@@ -72,16 +81,20 @@ export const FilterProvider = ({ children }: FilterProviderProps) => {
 };
 
 const Filter = () => {
-  const { startDate, endDate, setStartDate, setEndDate, selectedLinhas, setSelectedLinhas, applyFilters } = useFilter();
+  const { startDate, endDate, setStartDate, setEndDate, selectedLinhas, setSelectedLinhas, applyFilters, clearFilters } = useFilter();
   const [open, setOpen] = useState(false);
   const [open2, setOpen2] = useState(false);
   const [startValue, setStartValue] = useState(formatDate(startDate));
   const [endValue, setEndValue] = useState(formatDate(endDate));
   const [linhaSelectOpen, setLinhaSelectOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const location = useLocation();
 
   // Buscar linhas da API
   const { data: linhasData, isLoading: isLoadingLinhas } = useLinhasParaFiltro();
+
+  // Verificar se estamos na página de análise individual
+  const isAnaliseIndividual = location.pathname === "/linha-individual";
 
   // Limites de data
   const minDate = new Date("2015-01-01");
@@ -122,14 +135,29 @@ const Filter = () => {
 
   // Funções para manipular seleção de linhas
   const handleLinhaSelect = (linha: LinhaParaFiltro) => {
-    const isAlreadySelected = selectedLinhas.some((l) => l.id_linha === linha.id_linha);
+    if (isAnaliseIndividual) {
+      // Modo de seleção única para análise individual
+      const isAlreadySelected = selectedLinhas.some((l) => l.id_linha === linha.id_linha);
 
-    if (isAlreadySelected) {
-      // Remove a linha se já estiver selecionada
-      setSelectedLinhas(selectedLinhas.filter((l) => l.id_linha !== linha.id_linha));
+      if (isAlreadySelected) {
+        // Remove a linha se já estiver selecionada (limpa seleção)
+        setSelectedLinhas([]);
+      } else {
+        // Substitui qualquer seleção anterior por essa linha
+        setSelectedLinhas([linha]);
+      }
+      setLinhaSelectOpen(false); // Fecha o dropdown após seleção
     } else {
-      // Adiciona a linha se não estiver selecionada
-      setSelectedLinhas([...selectedLinhas, linha]);
+      // Modo de seleção múltipla para outras páginas
+      const isAlreadySelected = selectedLinhas.some((l) => l.id_linha === linha.id_linha);
+
+      if (isAlreadySelected) {
+        // Remove a linha se já estiver selecionada
+        setSelectedLinhas(selectedLinhas.filter((l) => l.id_linha !== linha.id_linha));
+      } else {
+        // Adiciona a linha se não estiver selecionada
+        setSelectedLinhas([...selectedLinhas, linha]);
+      }
     }
   };
 
@@ -163,8 +191,13 @@ const Filter = () => {
 
   const getDisplayText = () => {
     if (selectedLinhas.length === 0) {
-      return "Todas as linhas";
+      return isAnaliseIndividual ? "Selecione uma linha..." : "Todas as linhas";
     }
+
+    if (isAnaliseIndividual) {
+      return formatLinhaDisplay(selectedLinhas[0]);
+    }
+
     return `${selectedLinhas.length} linha${selectedLinhas.length > 1 ? "s" : ""} selecionada${
       selectedLinhas.length > 1 ? "s" : ""
     }`;
@@ -215,19 +248,21 @@ const Filter = () => {
                           }`}
                           onClick={() => handleLinhaSelect(linha)}
                         >
-                          <div
-                            className={`w-4 h-4 border-2 rounded-sm ${
-                              selectedLinhas.some((l) => l.id_linha === linha.id_linha)
-                                ? "bg-primary border-primary"
-                                : "border-gray-300"
-                            }`}
-                          >
-                            {selectedLinhas.some((l) => l.id_linha === linha.id_linha) && (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <div className="w-2 h-2 bg-white rounded-sm" />
-                              </div>
-                            )}
-                          </div>
+                          {!isAnaliseIndividual && (
+                            <div
+                              className={`w-4 h-4 border-2 rounded-sm ${
+                                selectedLinhas.some((l) => l.id_linha === linha.id_linha)
+                                  ? "bg-primary border-primary"
+                                  : "border-gray-300"
+                              }`}
+                            >
+                              {selectedLinhas.some((l) => l.id_linha === linha.id_linha) && (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <div className="w-2 h-2 bg-white rounded-sm" />
+                                </div>
+                              )}
+                            </div>
+                          )}
                           <div className="flex-1 text-sm">{formatLinhaDisplay(linha)}</div>
                         </div>
                       ))}
@@ -382,7 +417,15 @@ const Filter = () => {
             </div>
           </div>
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex gap-1">
+          <Button
+            onClick={clearFilters}
+            className="bg-[#1976d2] hover:bg-[#1565c0] text-white px-6 py-2"
+            disabled={!startDate || !endDate}
+            variant="outline"
+          >
+            Limpar
+          </Button>
           <Button
             onClick={applyFilters}
             className="bg-[#1976d2] hover:bg-[#1565c0] text-white px-6 py-2"
