@@ -6,6 +6,7 @@ import { queryClient } from "@/lib/queryClient";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import Index from "./pages/Index";
 import Linhas from "./pages/Linhas";
+import LinhaIndividual from "./pages/LinhaIndividual";
 import Ocorrencias from "./pages/Ocorrencias";
 import Eficiencia from "./pages/case-studies/Eficiencia";
 import Falhas from "./pages/case-studies/Falhas";
@@ -13,6 +14,7 @@ import Falhas from "./pages/case-studies/Falhas";
 const routes = [
   { path: "/", element: <Index /> },
   { path: "/linhas", element: <Linhas /> },
+  { path: "/linha-individual", element: <LinhaIndividual /> },
   { path: "/ocorrencias", element: <Ocorrencias /> },
   { path: "/eficiencia-das-linhas", element: <Eficiencia /> },
   { path: "/falhas-mecanicas", element: <Falhas /> },
