@@ -108,14 +108,9 @@ const Linhas = () => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
       {/* Mapa das Linhas */}
-      <Card className="col-span-full">
+      <Card className="col-span-full p-0">
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle className="text-muted-foreground text-center">
-              {appliedLinhas.length > 0
-                ? `Pontos de Parada das ${appliedLinhas.length} Linhas Selecionadas`
-                : "Pontos de Parada das Top 10 Linhas (por Viagens)"}
-            </CardTitle>
             {selectedLine && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">
@@ -131,7 +126,7 @@ const Linhas = () => {
             )}
           </div>
         </CardHeader>
-        <CardContent className="p-2">
+        <CardContent className="p-0">
           <div className="w-full h-96">
             {pontosData.data && pontosData.data.features && pontosData.data.features.length > 0 && (
               <LeafletPointsMap
@@ -219,7 +214,16 @@ const Linhas = () => {
         </CardHeader>
         <CardContent className="p-2">
           <div className="w-full h-80">
-            {viagens.data && <Barplot data={convertRankingToChartData(viagens.data.ranking)} valueLabel="Viagens" />}
+            {viagens.data && (
+              <Barplot
+                data={convertRankingToChartData(viagens.data.ranking)}
+                valueLabel="Viagens"
+                xAxisLabel="Linhas"
+                yAxisLabel="Número de Viagens"
+                showExportButton={true}
+                chartTitle="Viagens por Linha"
+              />
+            )}
           </div>
         </CardContent>
       </Card>
@@ -234,7 +238,14 @@ const Linhas = () => {
         <CardContent className="p-2">
           <div className="w-full h-80">
             {passageiros.data && (
-              <Barplot data={convertRankingToChartData(passageiros.data.ranking)} valueLabel="Passageiros" />
+              <Barplot
+                data={convertRankingToChartData(passageiros.data.ranking)}
+                valueLabel="Passageiros"
+                xAxisLabel="Linhas"
+                yAxisLabel="Número de Passageiros"
+                showExportButton={true}
+                chartTitle="Passageiros por Linha"
+              />
             )}
           </div>
         </CardContent>
@@ -250,7 +261,14 @@ const Linhas = () => {
         <CardContent className="p-2">
           <div className="w-full h-80">
             {ocorrencias.data && (
-              <Barplot data={convertRankingToChartData(ocorrencias.data.ranking)} valueLabel="Ocorrências" />
+              <Barplot
+                data={convertRankingToChartData(ocorrencias.data.ranking)}
+                valueLabel="Ocorrências"
+                xAxisLabel="Linhas"
+                yAxisLabel="Número de Ocorrências"
+                showExportButton={true}
+                chartTitle="Ocorrências por Linha"
+              />
             )}
           </div>
         </CardContent>
@@ -266,7 +284,14 @@ const Linhas = () => {
         <CardContent className="p-2">
           <div className="w-full h-80">
             {pontos.data && (
-              <Barplot data={convertRankingToChartData(pontos.data.ranking)} valueLabel="Pontos de Parada" />
+              <Barplot
+                data={convertRankingToChartData(pontos.data.ranking)}
+                valueLabel="Pontos de Parada"
+                xAxisLabel="Linhas"
+                yAxisLabel="Número de Pontos de Parada"
+                showExportButton={true}
+                chartTitle="Pontos de Parada por Linha"
+              />
             )}
           </div>
         </CardContent>
@@ -319,6 +344,9 @@ const Linhas = () => {
                 valueLabel="Linhas"
                 itemLabel="Bairro"
                 rotateLabels={true}
+                showExportButton={true}
+                chartTitle="Linhas por Bairro"
+                yAxisLabel="Número de Linhas"
               />
             )}
           </div>
