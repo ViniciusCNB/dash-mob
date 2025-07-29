@@ -8,6 +8,7 @@ import Index from "./pages/Index";
 import Linhas from "./pages/Linhas";
 import LinhaIndividual from "./pages/LinhaIndividual";
 import Ocorrencias from "./pages/Ocorrencias";
+import OcorrenciaIndividual from "./pages/OcorrenciaIndividual";
 import Eficiencia from "./pages/case-studies/Eficiencia";
 import Falhas from "./pages/case-studies/Falhas";
 
@@ -16,6 +17,7 @@ const routes = [
   { path: "/linhas", element: <Linhas /> },
   { path: "/linha-individual", element: <LinhaIndividual /> },
   { path: "/ocorrencias", element: <Ocorrencias /> },
+  { path: "/ocorrencia-individual", element: <OcorrenciaIndividual /> },
   { path: "/eficiencia-das-linhas", element: <Eficiencia /> },
   { path: "/falhas-mecanicas", element: <Falhas /> },
 ];

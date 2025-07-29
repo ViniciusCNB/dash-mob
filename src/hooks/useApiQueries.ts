@@ -123,6 +123,53 @@ export interface LinhaDashboardResponse {
   mapa_bairros: GeoJSONPolygonFeatureCollection;
 }
 
+// Interfaces para ocorrências
+export interface RankingOcorrenciasItem {
+  id: number;
+  nome: string;
+  total_ocorrencias: number;
+}
+
+export interface TendenciaTemporalItem {
+  periodo: string; // formato date
+  total_ocorrencias: number;
+}
+
+export interface OcorrenciasPorTipoDiaItem {
+  tipo_dia: string;
+  total_ocorrencias: number;
+}
+
+export interface JustificativaParaFiltro {
+  id: number;
+  nome: string;
+  total_ocorrencias: number;
+}
+
+export interface StatItem {
+  label: string;
+  value: number | string;
+}
+
+export interface RankingOcorrenciaDetalheItem {
+  id: number;
+  codigo: string;
+  valor: number;
+}
+
+export interface ChartDataItem {
+  category: string;
+  value: number;
+}
+
+export interface JustificativaDashboardResponse {
+  estatisticas_detalhadas: StatItem[];
+  grafico_linhas_afetadas: RankingOcorrenciaDetalheItem[];
+  grafico_veiculos_afetados: RankingOcorrenciaDetalheItem[];
+  grafico_media_ocorrencias_dia_semana: ChartDataItem[];
+  id_linha_mais_afetada?: number;
+}
+
 // Funções de fetch
 const fetchKpis = async (dataInicio: string, dataFim: string): Promise<KpiGeral> => {
   const response = await fetch(`/api/v1/geral/kpis?data_inicio=${dataInicio}&data_fim=${dataFim}`);
@@ -282,6 +329,55 @@ const fetchDashboardLinha = async (
   const response = await fetch(`/api/v1/linhas/${idLinha}/dashboard?data_inicio=${dataInicio}&data_fim=${dataFim}`);
   if (!response.ok) {
     throw new Error(`Erro ao buscar dashboard da linha ${idLinha}`);
+  }
+  return response.json();
+};
+
+// Funções de fetch para ocorrências
+const fetchRankingOcorrenciasPorJustificativa = async (
+  dataInicio: string,
+  dataFim: string,
+  limit = 10
+): Promise<RankingOcorrenciasItem[]> => {
+  const response = await fetch(
+    `/api/v1/ocorrencias/ranking-por-justificativa?data_inicio=${dataInicio}&data_fim=${dataFim}&limit=${limit}`
+  );
+  if (!response.ok) {
+    throw new Error("Erro ao buscar ranking de ocorrências por justificativa");
+  }
+  return response.json();
+};
+
+const fetchRankingOcorrenciasPorEntidade = async (
+  entidade: "empresa" | "concessionaria" | "linha",
+  dataInicio: string,
+  dataFim: string,
+  limit = 10
+): Promise<RankingOcorrenciasItem[]> => {
+  const response = await fetch(
+    `/api/v1/ocorrencias/ranking-por-entidade/${entidade}?data_inicio=${dataInicio}&data_fim=${dataFim}&limit=${limit}`
+  );
+  if (!response.ok) {
+    throw new Error(`Erro ao buscar ranking de ocorrências por ${entidade}`);
+  }
+  return response.json();
+};
+
+const fetchTendenciaTemporal = async (dataInicio: string, dataFim: string): Promise<TendenciaTemporalItem[]> => {
+  const response = await fetch(`/api/v1/ocorrencias/tendencia-temporal?data_inicio=${dataInicio}&data_fim=${dataFim}`);
+  if (!response.ok) {
+    throw new Error("Erro ao buscar tendência temporal de ocorrências");
+  }
+  return response.json();
+};
+
+const fetchOcorrenciasPorTipoDia = async (
+  dataInicio: string,
+  dataFim: string
+): Promise<OcorrenciasPorTipoDiaItem[]> => {
+  const response = await fetch(`/api/v1/ocorrencias/por-tipo-dia?data_inicio=${dataInicio}&data_fim=${dataFim}`);
+  if (!response.ok) {
+    throw new Error("Erro ao buscar ocorrências por tipo de dia");
   }
   return response.json();
 };
@@ -613,5 +709,190 @@ export const useDashboardLinha = (idLinha: number) => {
       return response;
     },
     enabled: !!idLinha,
+  });
+};
+
+// Hooks para ocorrências
+export const useRankingOcorrenciasPorJustificativa = () => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  return useQuery({
+    queryKey: [
+      "ranking-ocorrencias-justificativa",
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!appliedStartDate || !appliedEndDate) {
+        throw new Error("Datas não definidas");
+      }
+      return fetchRankingOcorrenciasPorJustificativa(formatDate(appliedStartDate), formatDate(appliedEndDate), 10);
+    },
+    enabled: !!(appliedStartDate && appliedEndDate),
+  });
+};
+
+export const useRankingOcorrenciasPorEmpresa = () => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  return useQuery({
+    queryKey: [
+      "ranking-ocorrencias-empresa",
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!appliedStartDate || !appliedEndDate) {
+        throw new Error("Datas não definidas");
+      }
+      return fetchRankingOcorrenciasPorEntidade("empresa", formatDate(appliedStartDate), formatDate(appliedEndDate), 10);
+    },
+    enabled: !!(appliedStartDate && appliedEndDate),
+  });
+};
+
+export const useRankingOcorrenciasPorConcessionaria = () => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  return useQuery({
+    queryKey: [
+      "ranking-ocorrencias-concessionaria",
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!appliedStartDate || !appliedEndDate) {
+        throw new Error("Datas não definidas");
+      }
+      return fetchRankingOcorrenciasPorEntidade("concessionaria", formatDate(appliedStartDate), formatDate(appliedEndDate), 10);
+    },
+    enabled: !!(appliedStartDate && appliedEndDate),
+  });
+};
+
+export const useRankingOcorrenciasPorLinha = () => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  return useQuery({
+    queryKey: [
+      "ranking-ocorrencias-linha",
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!appliedStartDate || !appliedEndDate) {
+        throw new Error("Datas não definidas");
+      }
+      return fetchRankingOcorrenciasPorEntidade("linha", formatDate(appliedStartDate), formatDate(appliedEndDate), 10);
+    },
+    enabled: !!(appliedStartDate && appliedEndDate),
+  });
+};
+
+export const useTendenciaTemporalOcorrencias = () => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  return useQuery({
+    queryKey: [
+      "tendencia-temporal-ocorrencias",
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!appliedStartDate || !appliedEndDate) {
+        throw new Error("Datas não definidas");
+      }
+      return fetchTendenciaTemporal(formatDate(appliedStartDate), formatDate(appliedEndDate));
+    },
+    enabled: !!(appliedStartDate && appliedEndDate),
+  });
+};
+
+export const useOcorrenciasPorTipoDia = () => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  return useQuery({
+    queryKey: [
+      "ocorrencias-por-tipo-dia",
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!appliedStartDate || !appliedEndDate) {
+        throw new Error("Datas não definidas");
+      }
+      return fetchOcorrenciasPorTipoDia(formatDate(appliedStartDate), formatDate(appliedEndDate));
+    },
+    enabled: !!(appliedStartDate && appliedEndDate),
+  });
+};
+
+// Funções de fetch para justificativas
+const fetchJustificativasParaFiltro = async (): Promise<JustificativaParaFiltro[]> => {
+  const response = await fetch(`/api/v1/ocorrencias/ranking-por-justificativa?data_inicio=2024-01-01&data_fim=2024-12-31&limit=50`);
+  if (!response.ok) {
+    throw new Error("Erro ao buscar justificativas para filtro");
+  }
+  
+  const data: RankingOcorrenciasItem[] = await response.json();
+  return data.map(item => ({
+    id: item.id,
+    nome: item.nome,
+    total_ocorrencias: item.total_ocorrencias
+  }));
+};
+
+const fetchDashboardJustificativa = async (
+  idJustificativa: number,
+  dataInicio: string,
+  dataFim: string
+): Promise<JustificativaDashboardResponse> => {
+  const response = await fetch(`/api/v1/ocorrencias/${idJustificativa}/dashboard?data_inicio=${dataInicio}&data_fim=${dataFim}`);
+  if (!response.ok) {
+    throw new Error("Erro ao buscar dashboard da justificativa");
+  }
+  return response.json();
+};
+
+// Hooks para justificativas
+export const useJustificativasParaFiltro = () => {
+  return useQuery({
+    queryKey: ["justificativas-para-filtro"],
+    queryFn: fetchJustificativasParaFiltro,
+    staleTime: 1000 * 60 * 5, // 5 minutos
+  });
+};
+
+export const useDashboardJustificativa = (idJustificativa: number) => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  return useQuery({
+    queryKey: [
+      "dashboard-justificativa",
+      idJustificativa,
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!appliedStartDate || !appliedEndDate) {
+        throw new Error("Datas não definidas");
+      }
+      return fetchDashboardJustificativa(idJustificativa, formatDate(appliedStartDate), formatDate(appliedEndDate));
+    },
+    enabled: !!(idJustificativa && appliedStartDate && appliedEndDate),
   });
 };

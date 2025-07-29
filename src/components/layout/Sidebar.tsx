@@ -69,6 +69,17 @@ const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
       title: "Ocorrências",
       icon: FilePen,
       path: "/ocorrencias",
+      hasSubmenu: true,
+      submenuItems: [
+        {
+          title: "Análise Individual",
+          path: "/ocorrencia-individual",
+        },
+        {
+          title: "Análise Geral",
+          path: "/ocorrencias",
+        },
+      ],
     },
     {
       title: "Bairros",
@@ -144,13 +155,13 @@ const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
     setHoverTimeout(timeout);
   };
 
-  const handleSubmenuEnter = () => {
+  const handleSubmenuEnter = (itemTitle: string) => {
     // Cancelar o timeout quando o mouse entra no submenu
     if (hoverTimeout) {
       clearTimeout(hoverTimeout);
       setHoverTimeout(null);
     }
-    setHoveredItem("Linhas");
+    setHoveredItem(itemTitle);
   };
 
   const handleSubmenuLeave = () => {
@@ -231,7 +242,7 @@ const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
               {!isCollapsed && item.hasSubmenu && hoveredItem === item.title && (
                 <div
                   className="absolute left-full top-0 ml-1 z-50 min-w-48 bg-background border rounded-md shadow-lg py-1"
-                  onMouseEnter={handleSubmenuEnter}
+                  onMouseEnter={() => handleSubmenuEnter(item.title)}
                   onMouseLeave={handleSubmenuLeave}
                   style={{
                     // Adicionar área invisível para facilitar a transição do mouse
