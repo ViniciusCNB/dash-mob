@@ -26,6 +26,24 @@ export interface ContagemPorEntidadeItem {
   quantidade_linhas: number;
 }
 
+// Interface para o ranking comparativo de concessionárias
+export interface RankingConcessionariaItem {
+  id_concessionaria: number;
+  codigo_concessionaria: number;
+  nome_concessionaria: string;
+  total_linhas: number;
+  total_ocorrencias: number;
+  total_passageiros: number;
+  taxa_ocorrencias_por_10k_viagens: number;
+}
+
+// Interface para concessionárias para filtro
+export interface ConcessionariaParaFiltro {
+  id_concessionaria: number;
+  codigo_concessionaria: number;
+  nome_concessionaria: string;
+}
+
 export interface KpiGeral {
   total_passageiros: number;
   total_viagens: number;
@@ -912,6 +930,13 @@ export interface BairroDashboardResponse {
   mapa_pontos_bairro: GeoJSONFeatureCollection;
 }
 
+// Interface para o dashboard de concessionária
+export interface ConcessionariaDashboardResponse {
+  estatisticas_detalhadas: StatItem[];
+  grafico_linhas_mais_utilizadas: RankingItem[];
+  grafico_media_passageiros_dia_semana: ChartDataItem[];
+}
+
 // Funções de fetch para bairros
 const fetchBairrosParaFiltro = async (): Promise<BairroParaFiltro[]> => {
   const response = await fetch("/api/v1/bairros/");
@@ -944,6 +969,41 @@ const fetchDashboardBairro = async (
   const response = await fetch(`/api/v1/bairros/${idBairro}/dashboard?data_inicio=${dataInicio}&data_fim=${dataFim}`);
   if (!response.ok) {
     throw new Error(`Erro ao buscar dashboard do bairro ${idBairro}`);
+  }
+  return response.json();
+};
+
+const fetchRankingComparativoConcessionarias = async (
+  dataInicio: string,
+  dataFim: string
+): Promise<RankingConcessionariaItem[]> => {
+  const response = await fetch(
+    `/api/v1/concessionarias/ranking-comparativo?data_inicio=${dataInicio}&data_fim=${dataFim}`
+  );
+  if (!response.ok) {
+    throw new Error("Erro ao buscar ranking comparativo de concessionárias");
+  }
+  return response.json();
+};
+
+const fetchConcessionariasParaFiltro = async (): Promise<ConcessionariaParaFiltro[]> => {
+  const response = await fetch("/api/v1/concessionarias/");
+  if (!response.ok) {
+    throw new Error("Erro ao buscar concessionárias para filtro");
+  }
+  return response.json();
+};
+
+const fetchDashboardConcessionaria = async (
+  idConcessionaria: number,
+  dataInicio: string,
+  dataFim: string
+): Promise<ConcessionariaDashboardResponse> => {
+  const response = await fetch(
+    `/api/v1/concessionarias/${idConcessionaria}/dashboard?data_inicio=${dataInicio}&data_fim=${dataFim}`
+  );
+  if (!response.ok) {
+    throw new Error(`Erro ao buscar dashboard da concessionária ${idConcessionaria}`);
   }
   return response.json();
 };
@@ -1056,5 +1116,74 @@ export const useDashboardBairro = (idBairro: number) => {
       return fetchDashboardBairro(idBairro, dates.inicio, dates.fim);
     },
     enabled: !!idBairro,
+  });
+};
+
+// Hooks para concessionárias
+export const useRankingComparativoConcessionarias = () => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  return useQuery({
+    queryKey: [
+      "ranking-comparativo-concessionarias",
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!appliedStartDate || !appliedEndDate) {
+        throw new Error("Datas não definidas");
+      }
+      return fetchRankingComparativoConcessionarias(formatDate(appliedStartDate), formatDate(appliedEndDate));
+    },
+    enabled: !!(appliedStartDate && appliedEndDate),
+  });
+};
+
+export const useConcessionariasParaFiltro = () => {
+  return useQuery({
+    queryKey: ["concessionarias-para-filtro"],
+    queryFn: fetchConcessionariasParaFiltro,
+    staleTime: 5 * 60 * 1000, // 5 minutos - dados de concessionárias não mudam frequentemente
+  });
+};
+
+export const useDashboardConcessionaria = (idConcessionaria: number) => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  // Usar datas padrão se não houver datas no filtro (últimos 30 dias)
+  const getDefaultDates = () => {
+    const hoje = new Date();
+    const umMesAtras = new Date(hoje);
+    umMesAtras.setDate(hoje.getDate() - 30);
+    return {
+      inicio: formatDate(umMesAtras),
+      fim: formatDate(hoje),
+    };
+  };
+
+  return useQuery({
+    queryKey: [
+      "dashboard-concessionaria",
+      idConcessionaria,
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!idConcessionaria) {
+        throw new Error("ID da concessionária não fornecido");
+      }
+
+      const dates =
+        appliedStartDate && appliedEndDate
+          ? { inicio: formatDate(appliedStartDate), fim: formatDate(appliedEndDate) }
+          : getDefaultDates();
+
+      return fetchDashboardConcessionaria(idConcessionaria, dates.inicio, dates.fim);
+    },
+    enabled: !!idConcessionaria,
   });
 };

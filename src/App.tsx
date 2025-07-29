@@ -13,6 +13,8 @@ import Eficiencia from "./pages/case-studies/Eficiencia";
 import Falhas from "./pages/case-studies/Falhas";
 import Bairros from "./pages/Bairros";
 import BairrosIndividual from "./pages/BairrosIndividual";
+import Concessionarias from "./pages/Concessionarias";
+import ConcessionariaIndividual from "./pages/ConcessionariaIndividual";
 
 const routes = [
   { path: "/", element: <Index /> },
@@ -22,6 +24,8 @@ const routes = [
   { path: "/ocorrencia-individual", element: <OcorrenciaIndividual /> },
   { path: "/bairros", element: <Bairros /> },
   { path: "/bairros-individual", element: <BairrosIndividual /> },
+  { path: "/concessionarias", element: <Concessionarias /> },
+  { path: "/concessionaria-individual", element: <ConcessionariaIndividual /> },
   { path: "/eficiencia-das-linhas", element: <Eficiencia /> },
   { path: "/falhas-mecanicas", element: <Falhas /> },
 ];

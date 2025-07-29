@@ -101,6 +101,17 @@ const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
       title: "Concessionárias",
       icon: Warehouse,
       path: "/concessionarias",
+      hasSubmenu: true,
+      submenuItems: [
+        {
+          title: "Análise Individual",
+          path: "/concessionaria-individual",
+        },
+        {
+          title: "Análise Geral",
+          path: "/concessionarias",
+        },
+      ],
     },
     {
       title: "Veículos",
