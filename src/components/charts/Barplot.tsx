@@ -202,7 +202,7 @@ export const Barplot = ({
         {/* Label do eixo X */}
         <text
           x={x + xScale.bandwidth() / 2}
-          y={boundsHeight + (rotateLabels ? 35 : 15)}
+          y={boundsHeight + (rotateLabels ? 15 : 15)}
           textAnchor={rotateLabels ? "end" : "middle"}
           fontSize={11}
           fill="var(--muted-foreground)"
@@ -210,7 +210,7 @@ export const Barplot = ({
           style={{ pointerEvents: "none" }}
           transform={rotateLabels ? `rotate(-45, ${x + xScale.bandwidth() / 2}, ${boundsHeight + 35})` : undefined}
         >
-          {d.name}
+          {d.name.length > (rotateLabels ? 12 : 12) ? `${d.name.substring(0, rotateLabels ? 12 : 12)}...` : d.name}
         </text>
       </g>
     );
