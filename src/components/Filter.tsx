@@ -7,10 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { useLinhasParaFiltro, LinhaParaFiltro } from "@/hooks/useApiQueries";
+import { useLinhasParaFiltro, useBairrosParaFiltro, LinhaParaFiltro, BairroParaFiltro } from "@/hooks/useApiQueries";
 import { useLocation } from "react-router";
 
-// Contexto para gerenciar o filtro de período e linhas
+// Contexto para gerenciar o filtro de período, linhas e bairros
 interface FilterContextType {
   startDate: Date | undefined;
   endDate: Date | undefined;
@@ -18,11 +18,18 @@ interface FilterContextType {
   appliedEndDate: Date | undefined;
   selectedLinhas: LinhaParaFiltro[];
   appliedLinhas: LinhaParaFiltro[];
+  selectedBairros: BairroParaFiltro[];
+  appliedBairros: BairroParaFiltro[];
   setStartDate: (date: Date | undefined) => void;
   setEndDate: (date: Date | undefined) => void;
   setSelectedLinhas: (linhas: LinhaParaFiltro[]) => void;
+  setSelectedBairros: (bairros: BairroParaFiltro[]) => void;
   applyFilters: () => void;
   clearFilters: () => void;
+}
+
+interface FilterProviderProps {
+  children: ReactNode;
 }
 
 const FilterContext = createContext<FilterContextType | undefined>(undefined);
@@ -35,10 +42,6 @@ export const useFilter = () => {
   return context;
 };
 
-interface FilterProviderProps {
-  children: ReactNode;
-}
-
 export const FilterProvider = ({ children }: FilterProviderProps) => {
   const [startDate, setStartDate] = useState<Date | undefined>(new Date("2024-01-01"));
   const [endDate, setEndDate] = useState<Date | undefined>(new Date("2024-12-31"));
@@ -46,17 +49,21 @@ export const FilterProvider = ({ children }: FilterProviderProps) => {
   const [appliedEndDate, setAppliedEndDate] = useState<Date | undefined>(new Date("2024-12-31"));
   const [selectedLinhas, setSelectedLinhas] = useState<LinhaParaFiltro[]>([]);
   const [appliedLinhas, setAppliedLinhas] = useState<LinhaParaFiltro[]>([]);
+  const [selectedBairros, setSelectedBairros] = useState<BairroParaFiltro[]>([]);
+  const [appliedBairros, setAppliedBairros] = useState<BairroParaFiltro[]>([]);
 
   const applyFilters = () => {
     setAppliedStartDate(startDate);
     setAppliedEndDate(endDate);
     setAppliedLinhas(selectedLinhas);
+    setAppliedBairros(selectedBairros);
   };
 
   const clearFilters = () => {
     setStartDate(new Date("2024-01-01"));
     setEndDate(new Date("2024-12-31"));
     setSelectedLinhas([]);
+    setSelectedBairros([]);
   };
 
   return (
@@ -68,9 +75,12 @@ export const FilterProvider = ({ children }: FilterProviderProps) => {
         appliedEndDate,
         selectedLinhas,
         appliedLinhas,
+        selectedBairros,
+        appliedBairros,
         setStartDate,
         setEndDate,
         setSelectedLinhas,
+        setSelectedBairros,
         applyFilters,
         clearFilters,
       }}
@@ -81,20 +91,35 @@ export const FilterProvider = ({ children }: FilterProviderProps) => {
 };
 
 const Filter = () => {
-  const { startDate, endDate, setStartDate, setEndDate, selectedLinhas, setSelectedLinhas, applyFilters, clearFilters } = useFilter();
+  const {
+    startDate,
+    endDate,
+    setStartDate,
+    setEndDate,
+    selectedLinhas,
+    setSelectedLinhas,
+    selectedBairros,
+    setSelectedBairros,
+    applyFilters,
+    clearFilters,
+  } = useFilter();
   const [open, setOpen] = useState(false);
   const [open2, setOpen2] = useState(false);
   const [startValue, setStartValue] = useState(formatDate(startDate));
   const [endValue, setEndValue] = useState(formatDate(endDate));
   const [linhaSelectOpen, setLinhaSelectOpen] = useState(false);
+  const [bairroSelectOpen, setBairroSelectOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchBairroTerm, setSearchBairroTerm] = useState("");
   const location = useLocation();
 
-  // Buscar linhas da API
+  // Buscar linhas e bairros da API
   const { data: linhasData, isLoading: isLoadingLinhas } = useLinhasParaFiltro();
+  const { data: bairrosData, isLoading: isLoadingBairros } = useBairrosParaFiltro();
 
   // Verificar se estamos na página de análise individual
-  const isAnaliseIndividual = location.pathname === "/linha-individual";
+  const isAnaliseIndividualLinha = location.pathname === "/linha-individual";
+  const isAnaliseIndividualBairro = location.pathname === "/bairro-individual";
 
   // Limites de data
   const minDate = new Date("2015-01-01");
@@ -135,7 +160,7 @@ const Filter = () => {
 
   // Funções para manipular seleção de linhas
   const handleLinhaSelect = (linha: LinhaParaFiltro) => {
-    if (isAnaliseIndividual) {
+    if (isAnaliseIndividualLinha) {
       // Modo de seleção única para análise individual
       const isAlreadySelected = selectedLinhas.some((l) => l.id_linha === linha.id_linha);
 
@@ -161,46 +186,72 @@ const Filter = () => {
     }
   };
 
+  // Funções para manipular seleção de bairros
+  const handleBairroSelect = (bairro: BairroParaFiltro) => {
+    if (isAnaliseIndividualBairro) {
+      // Modo de seleção única para análise individual
+      const isAlreadySelected = selectedBairros.some((b) => b.id_bairro === bairro.id_bairro);
+
+      if (isAlreadySelected) {
+        // Remove o bairro se já estiver selecionado (limpa seleção)
+        setSelectedBairros([]);
+      } else {
+        // Substitui qualquer seleção anterior por esse bairro
+        setSelectedBairros([bairro]);
+      }
+      setBairroSelectOpen(false); // Fecha o dropdown após seleção
+    } else {
+      // Modo de seleção múltipla para outras páginas
+      const isAlreadySelected = selectedBairros.some((b) => b.id_bairro === bairro.id_bairro);
+
+      if (isAlreadySelected) {
+        // Remove o bairro se já estiver selecionado
+        setSelectedBairros(selectedBairros.filter((b) => b.id_bairro !== bairro.id_bairro));
+      } else {
+        // Adiciona o bairro se não estiver selecionado
+        setSelectedBairros([...selectedBairros, bairro]);
+      }
+    }
+  };
+
   const formatLinhaDisplay = (linha: LinhaParaFiltro) => {
     return linha.nome_linha ? `${linha.cod_linha} - ${linha.nome_linha}` : linha.cod_linha;
   };
 
-  // Filtrar linhas baseado no termo de pesquisa
-  const getFilteredLinhas = () => {
-    if (!linhasData) return [];
-
-    const filtered = linhasData.filter((linha) => {
-      const searchLower = searchTerm.toLowerCase();
-      const codigoMatch = linha.cod_linha.toLowerCase().includes(searchLower);
-      const nomeMatch = linha.nome_linha?.toLowerCase().includes(searchLower);
-      return codigoMatch || nomeMatch;
-    });
-
-    // Ordenar: selecionadas primeiro, depois as não selecionadas
-    return filtered.sort((a, b) => {
-      const aSelected = selectedLinhas.some((l) => l.id_linha === a.id_linha);
-      const bSelected = selectedLinhas.some((l) => l.id_linha === b.id_linha);
-
-      if (aSelected && !bSelected) return -1;
-      if (!aSelected && bSelected) return 1;
-
-      // Se ambas têm o mesmo status de seleção, ordenar por código
-      return a.cod_linha.localeCompare(b.cod_linha);
-    });
+  const formatBairroDisplay = (bairro: BairroParaFiltro) => {
+    return bairro.nome_bairro;
   };
 
-  const getDisplayText = () => {
-    if (selectedLinhas.length === 0) {
-      return isAnaliseIndividual ? "Selecione uma linha..." : "Todas as linhas";
-    }
+  const getFilteredLinhas = () => {
+    if (!linhasData) return [];
+    return linhasData.filter((linha) => formatLinhaDisplay(linha).toLowerCase().includes(searchTerm.toLowerCase()));
+  };
 
-    if (isAnaliseIndividual) {
+  const getFilteredBairros = () => {
+    if (!bairrosData) return [];
+    return bairrosData.filter((bairro) =>
+      formatBairroDisplay(bairro).toLowerCase().includes(searchBairroTerm.toLowerCase())
+    );
+  };
+
+  const getLinhaDisplayText = () => {
+    if (selectedLinhas.length === 0) {
+      return "Selecione uma linha";
+    }
+    if (selectedLinhas.length === 1) {
       return formatLinhaDisplay(selectedLinhas[0]);
     }
+    return `${selectedLinhas.length} linhas selecionadas`;
+  };
 
-    return `${selectedLinhas.length} linha${selectedLinhas.length > 1 ? "s" : ""} selecionada${
-      selectedLinhas.length > 1 ? "s" : ""
-    }`;
+  const getBairroDisplayText = () => {
+    if (selectedBairros.length === 0) {
+      return "Selecione um bairro";
+    }
+    if (selectedBairros.length === 1) {
+      return formatBairroDisplay(selectedBairros[0]);
+    }
+    return `${selectedBairros.length} bairros selecionados`;
   };
 
   return (
@@ -221,7 +272,7 @@ const Filter = () => {
                   aria-expanded={linhaSelectOpen}
                   className="w-full justify-between bg-background"
                 >
-                  {getDisplayText()}
+                  {getLinhaDisplayText()}
                   <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
@@ -248,7 +299,7 @@ const Filter = () => {
                           }`}
                           onClick={() => handleLinhaSelect(linha)}
                         >
-                          {!isAnaliseIndividual && (
+                          {!isAnaliseIndividualLinha && (
                             <div
                               className={`w-4 h-4 border-2 rounded-sm ${
                                 selectedLinhas.some((l) => l.id_linha === linha.id_linha)
@@ -279,14 +330,70 @@ const Filter = () => {
         </div>
         <div className="flex flex-col gap-1 w-full">
           <div className="text-sm font-medium">Bairro</div>
-          <Select>
-            <SelectTrigger className="w-full bg-background">
-              <SelectValue placeholder="Bairro" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="centro">Centro</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <Popover open={bairroSelectOpen} onOpenChange={setBairroSelectOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={bairroSelectOpen}
+                  className="w-full justify-between bg-background"
+                >
+                  {getBairroDisplayText()}
+                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[400px] p-0">
+                <div className="flex items-center border-b px-3 py-2">
+                  <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                  <Input
+                    placeholder="Pesquisar bairro..."
+                    value={searchBairroTerm}
+                    onChange={(e) => setSearchBairroTerm(e.target.value)}
+                    className="border-0 shadow-none focus-visible:ring-0 h-8"
+                  />
+                </div>
+                <div className="max-h-60 overflow-y-auto">
+                  {isLoadingBairros ? (
+                    <div className="p-4 text-center text-sm text-muted-foreground">Carregando bairros...</div>
+                  ) : getFilteredBairros().length > 0 ? (
+                    <div className="space-y-1 p-2">
+                      {getFilteredBairros().map((bairro) => (
+                        <div
+                          key={bairro.id_bairro}
+                          className={`flex items-center space-x-2 p-2 rounded-md cursor-pointer hover:bg-accent ${
+                            selectedBairros.some((b) => b.id_bairro === bairro.id_bairro) ? "bg-accent" : ""
+                          }`}
+                          onClick={() => handleBairroSelect(bairro)}
+                        >
+                          {!isAnaliseIndividualBairro && (
+                            <div
+                              className={`w-4 h-4 border-2 rounded-sm ${
+                                selectedBairros.some((b) => b.id_bairro === bairro.id_bairro)
+                                  ? "bg-primary border-primary"
+                                  : "border-gray-300"
+                              }`}
+                            >
+                              {selectedBairros.some((b) => b.id_bairro === bairro.id_bairro) && (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <div className="w-2 h-2 bg-white rounded-sm" />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          <div className="flex-1 text-sm">{formatBairroDisplay(bairro)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      {searchBairroTerm ? "Nenhum bairro encontrado" : "Nenhum bairro disponível"}
+                    </div>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
         <div className="flex flex-col gap-1 w-full">
           <div className="text-sm font-medium">Ocorrência</div>

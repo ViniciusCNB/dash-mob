@@ -896,3 +896,165 @@ export const useDashboardJustificativa = (idJustificativa: number) => {
     enabled: !!(idJustificativa && appliedStartDate && appliedEndDate),
   });
 };
+
+// Interface para bairros para filtro
+export interface BairroParaFiltro {
+  id_bairro: number;
+  nome_bairro: string;
+}
+
+// Interface para o dashboard de bairro
+export interface BairroDashboardResponse {
+  estatisticas_detalhadas: StatItem[];
+  grafico_linhas_mais_utilizadas: RankingItem[];
+  grafico_media_passageiros_dia_semana: ChartDataItem[];
+  mapa_geometria_bairro: GeoJSONPolygonFeatureCollection;
+  mapa_pontos_bairro: GeoJSONFeatureCollection;
+}
+
+// Funções de fetch para bairros
+const fetchBairrosParaFiltro = async (): Promise<BairroParaFiltro[]> => {
+  const response = await fetch("/api/v1/bairros/");
+  if (!response.ok) {
+    throw new Error("Erro ao buscar bairros para filtro");
+  }
+  return response.json();
+};
+
+const fetchRankingBairros = async (
+  metrica: "linhas" | "ocorrencias" | "pontos",
+  dataInicio: string,
+  dataFim: string,
+  limit = 10
+): Promise<RankingItem[]> => {
+  const response = await fetch(
+    `/api/v1/bairros/ranking/${metrica}?data_inicio=${dataInicio}&data_fim=${dataFim}&limit=${limit}`
+  );
+  if (!response.ok) {
+    throw new Error(`Erro ao buscar ranking de ${metrica} por bairros`);
+  }
+  return response.json();
+};
+
+const fetchDashboardBairro = async (
+  idBairro: number,
+  dataInicio: string,
+  dataFim: string
+): Promise<BairroDashboardResponse> => {
+  const response = await fetch(`/api/v1/bairros/${idBairro}/dashboard?data_inicio=${dataInicio}&data_fim=${dataFim}`);
+  if (!response.ok) {
+    throw new Error(`Erro ao buscar dashboard do bairro ${idBairro}`);
+  }
+  return response.json();
+};
+
+// Hooks para bairros
+export const useBairrosParaFiltro = () => {
+  return useQuery({
+    queryKey: ["bairros-para-filtro"],
+    queryFn: fetchBairrosParaFiltro,
+    staleTime: 5 * 60 * 1000, // 5 minutos - dados de bairros não mudam frequentemente
+  });
+};
+
+export const useRankingBairrosLinhas = () => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  return useQuery({
+    queryKey: [
+      "ranking-bairros-linhas",
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!appliedStartDate || !appliedEndDate) {
+        throw new Error("Datas não definidas");
+      }
+      return fetchRankingBairros("linhas", formatDate(appliedStartDate), formatDate(appliedEndDate), 10);
+    },
+    enabled: !!(appliedStartDate && appliedEndDate),
+  });
+};
+
+export const useRankingBairrosOcorrencias = () => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  return useQuery({
+    queryKey: [
+      "ranking-bairros-ocorrencias",
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!appliedStartDate || !appliedEndDate) {
+        throw new Error("Datas não definidas");
+      }
+      return fetchRankingBairros("ocorrencias", formatDate(appliedStartDate), formatDate(appliedEndDate), 10);
+    },
+    enabled: !!(appliedStartDate && appliedEndDate),
+  });
+};
+
+export const useRankingBairrosPontos = () => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  return useQuery({
+    queryKey: [
+      "ranking-bairros-pontos",
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!appliedStartDate || !appliedEndDate) {
+        throw new Error("Datas não definidas");
+      }
+      return fetchRankingBairros("pontos", formatDate(appliedStartDate), formatDate(appliedEndDate), 10);
+    },
+    enabled: !!(appliedStartDate && appliedEndDate),
+  });
+};
+
+export const useDashboardBairro = (idBairro: number) => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  // Usar datas padrão se não houver datas no filtro (últimos 30 dias)
+  const getDefaultDates = () => {
+    const hoje = new Date();
+    const umMesAtras = new Date(hoje);
+    umMesAtras.setDate(hoje.getDate() - 30);
+    return {
+      inicio: formatDate(umMesAtras),
+      fim: formatDate(hoje),
+    };
+  };
+
+  return useQuery({
+    queryKey: [
+      "dashboard-bairro",
+      idBairro,
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!idBairro) {
+        throw new Error("ID do bairro não fornecido");
+      }
+
+      const dates =
+        appliedStartDate && appliedEndDate
+          ? { inicio: formatDate(appliedStartDate), fim: formatDate(appliedEndDate) }
+          : getDefaultDates();
+
+      return fetchDashboardBairro(idBairro, dates.inicio, dates.fim);
+    },
+    enabled: !!idBairro,
+  });
+};

@@ -85,6 +85,17 @@ const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
       title: "Bairros",
       icon: Building2,
       path: "/bairros",
+      hasSubmenu: true,
+      submenuItems: [
+        {
+          title: "Análise Individual",
+          path: "/bairros-individual",
+        },
+        {
+          title: "Análise Geral",
+          path: "/bairros",
+        },
+      ],
     },
     {
       title: "Concessionárias",
