@@ -37,6 +37,22 @@ export interface RankingConcessionariaItem {
   taxa_ocorrencias_por_10k_viagens: number;
 }
 
+// Interface para o ranking comparativo de empresas
+export interface RankingEmpresaItem {
+  id_empresa: number;
+  nome_empresa: string;
+  total_linhas: number;
+  total_ocorrencias: number;
+  total_passageiros: number;
+  taxa_ocorrencias_por_10k_viagens: number;
+}
+
+// Interface para empresas para filtro
+export interface EmpresaParaFiltro {
+  id_empresa: number;
+  nome_empresa: string;
+}
+
 // Interface para concessionárias para filtro
 export interface ConcessionariaParaFiltro {
   id_concessionaria: number;
@@ -937,6 +953,15 @@ export interface ConcessionariaDashboardResponse {
   grafico_media_passageiros_dia_semana: ChartDataItem[];
 }
 
+// Interface para o dashboard de empresa
+export interface EmpresaDashboardResponse {
+  estatisticas_detalhadas: StatItem[];
+  grafico_justificativas: ChartDataItem[];
+  grafico_linhas_mais_utilizadas: RankingItem[];
+  grafico_media_passageiros_dia_semana: ChartDataItem[];
+  grafico_evolucao_passageiros_ano: ChartDataItem[];
+}
+
 // Funções de fetch para bairros
 const fetchBairrosParaFiltro = async (): Promise<BairroParaFiltro[]> => {
   const response = await fetch("/api/v1/bairros/");
@@ -1004,6 +1029,34 @@ const fetchDashboardConcessionaria = async (
   );
   if (!response.ok) {
     throw new Error(`Erro ao buscar dashboard da concessionária ${idConcessionaria}`);
+  }
+  return response.json();
+};
+
+const fetchRankingComparativoEmpresas = async (dataInicio: string, dataFim: string): Promise<RankingEmpresaItem[]> => {
+  const response = await fetch(`/api/v1/empresas/ranking-comparativo?data_inicio=${dataInicio}&data_fim=${dataFim}`);
+  if (!response.ok) {
+    throw new Error("Erro ao buscar ranking comparativo de empresas");
+  }
+  return response.json();
+};
+
+const fetchEmpresasParaFiltro = async (): Promise<EmpresaParaFiltro[]> => {
+  const response = await fetch("/api/v1/empresas/");
+  if (!response.ok) {
+    throw new Error("Erro ao buscar empresas para filtro");
+  }
+  return response.json();
+};
+
+const fetchDashboardEmpresa = async (
+  idEmpresa: number,
+  dataInicio: string,
+  dataFim: string
+): Promise<EmpresaDashboardResponse> => {
+  const response = await fetch(`/api/v1/empresas/${idEmpresa}/dashboard?data_inicio=${dataInicio}&data_fim=${dataFim}`);
+  if (!response.ok) {
+    throw new Error(`Erro ao buscar dashboard da empresa ${idEmpresa}`);
   }
   return response.json();
 };
@@ -1355,5 +1408,76 @@ export const useDashboardVeiculo = (idVeiculo: number) => {
       return fetchDashboardVeiculo(idVeiculo, dates.inicio, dates.fim);
     },
     enabled: !!idVeiculo,
+  });
+};
+
+// =============== SEÇÃO DE EMPRESAS ===============
+
+// Hooks para empresas
+export const useRankingComparativoEmpresas = () => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  return useQuery({
+    queryKey: [
+      "ranking-comparativo-empresas",
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!appliedStartDate || !appliedEndDate) {
+        throw new Error("Datas não definidas");
+      }
+      return fetchRankingComparativoEmpresas(formatDate(appliedStartDate), formatDate(appliedEndDate));
+    },
+    enabled: !!(appliedStartDate && appliedEndDate),
+  });
+};
+
+export const useEmpresasParaFiltro = () => {
+  return useQuery({
+    queryKey: ["empresas-para-filtro"],
+    queryFn: fetchEmpresasParaFiltro,
+    staleTime: 5 * 60 * 1000, // 5 minutos - dados de empresas não mudam frequentemente
+  });
+};
+
+export const useDashboardEmpresa = (idEmpresa: number) => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  // Usar datas padrão se não houver datas no filtro (últimos 30 dias)
+  const getDefaultDates = () => {
+    const hoje = new Date();
+    const umMesAtras = new Date(hoje);
+    umMesAtras.setDate(hoje.getDate() - 30);
+    return {
+      inicio: formatDate(umMesAtras),
+      fim: formatDate(hoje),
+    };
+  };
+
+  return useQuery({
+    queryKey: [
+      "dashboard-empresa",
+      idEmpresa,
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!idEmpresa) {
+        throw new Error("ID da empresa não fornecido");
+      }
+
+      const dates =
+        appliedStartDate && appliedEndDate
+          ? { inicio: formatDate(appliedStartDate), fim: formatDate(appliedEndDate) }
+          : getDefaultDates();
+
+      return fetchDashboardEmpresa(idEmpresa, dates.inicio, dates.fim);
+    },
+    enabled: !!idEmpresa,
   });
 };

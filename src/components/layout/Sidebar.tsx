@@ -133,6 +133,17 @@ const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
       title: "Empresas",
       icon: Store,
       path: "/empresas",
+      hasSubmenu: true,
+      submenuItems: [
+        {
+          title: "Análise Individual",
+          path: "/empresa-individual",
+        },
+        {
+          title: "Análise Geral",
+          path: "/empresas",
+        },
+      ],
     },
   ];
 

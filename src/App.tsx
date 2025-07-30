@@ -17,6 +17,8 @@ import Concessionarias from "./pages/Concessionarias";
 import ConcessionariaIndividual from "./pages/ConcessionariaIndividual";
 import Veiculos from "./pages/Veiculos";
 import VeiculoIndividual from "./pages/VeiculoIndividual";
+import Empresas from "./pages/Empresas";
+import EmpresaIndividual from "./pages/EmpresaIndividual";
 
 const routes = [
   { path: "/", element: <Index /> },
@@ -30,6 +32,8 @@ const routes = [
   { path: "/concessionaria-individual", element: <ConcessionariaIndividual /> },
   { path: "/veiculos", element: <Veiculos /> },
   { path: "/veiculo-individual", element: <VeiculoIndividual /> },
+  { path: "/empresas", element: <Empresas /> },
+  { path: "/empresa-individual", element: <EmpresaIndividual /> },
   { path: "/eficiencia-das-linhas", element: <Eficiencia /> },
   { path: "/falhas-mecanicas", element: <Falhas /> },
 ];
