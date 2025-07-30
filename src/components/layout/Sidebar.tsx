@@ -117,6 +117,17 @@ const Sidebar = ({ isCollapsed, onToggle }: SidebarProps) => {
       title: "Veículos",
       icon: Bus,
       path: "/veiculos",
+      hasSubmenu: true,
+      submenuItems: [
+        {
+          title: "Análise Individual",
+          path: "/veiculo-individual",
+        },
+        {
+          title: "Análise Geral",
+          path: "/veiculos",
+        },
+      ],
     },
     {
       title: "Empresas",

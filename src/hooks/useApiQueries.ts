@@ -1187,3 +1187,173 @@ export const useDashboardConcessionaria = (idConcessionaria: number) => {
     enabled: !!idConcessionaria,
   });
 };
+
+// =============== SEÇÃO DE VEÍCULOS ===============
+
+// Interfaces para veículos
+export interface VeiculoParaFiltro {
+  id_veiculo: number;
+  identificador_veiculo: number;
+}
+
+export interface RankingVeiculoItem {
+  id_veiculo: number;
+  identificador_veiculo: number;
+  nome_empresa: string | null;
+  idade_veiculo_anos: number | null;
+  valor: number;
+}
+
+export interface VeiculoDashboardResponse {
+  estatisticas_detalhadas: StatItem[];
+  grafico_justificativas: ChartDataItem[];
+  grafico_linhas_atendidas: RankingItem[];
+  grafico_media_passageiros_dia_semana: ChartDataItem[];
+}
+
+// Funções de fetch para veículos
+const fetchVeiculosParaFiltro = async (): Promise<VeiculoParaFiltro[]> => {
+  const response = await fetch("/api/v1/veiculos/");
+  if (!response.ok) {
+    throw new Error("Erro ao buscar veículos para filtro");
+  }
+  return response.json();
+};
+
+const fetchRankingVeiculos = async (
+  metrica: "passageiros" | "ocorrencias" | "km_percorrido",
+  dataInicio: string,
+  dataFim: string,
+  limit = 10
+): Promise<RankingVeiculoItem[]> => {
+  const response = await fetch(
+    `/api/v1/veiculos/ranking/${metrica}?data_inicio=${dataInicio}&data_fim=${dataFim}&limit=${limit}`
+  );
+  if (!response.ok) {
+    throw new Error(`Erro ao buscar ranking de ${metrica} por veículos`);
+  }
+  return response.json();
+};
+
+const fetchDashboardVeiculo = async (
+  idVeiculo: number,
+  dataInicio: string,
+  dataFim: string
+): Promise<VeiculoDashboardResponse> => {
+  const response = await fetch(`/api/v1/veiculos/${idVeiculo}/dashboard?data_inicio=${dataInicio}&data_fim=${dataFim}`);
+  if (!response.ok) {
+    throw new Error(`Erro ao buscar dashboard do veículo ${idVeiculo}`);
+  }
+  return response.json();
+};
+
+// Hooks para veículos
+export const useVeiculosParaFiltro = () => {
+  return useQuery({
+    queryKey: ["veiculos-para-filtro"],
+    queryFn: fetchVeiculosParaFiltro,
+    staleTime: 5 * 60 * 1000, // 5 minutos - dados de veículos não mudam frequentemente
+  });
+};
+
+export const useRankingVeiculosPassageiros = () => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  return useQuery({
+    queryKey: [
+      "ranking-veiculos-passageiros",
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!appliedStartDate || !appliedEndDate) {
+        throw new Error("Datas não definidas");
+      }
+      return fetchRankingVeiculos("passageiros", formatDate(appliedStartDate), formatDate(appliedEndDate), 10);
+    },
+    enabled: !!(appliedStartDate && appliedEndDate),
+  });
+};
+
+export const useRankingVeiculosOcorrencias = () => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  return useQuery({
+    queryKey: [
+      "ranking-veiculos-ocorrencias",
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!appliedStartDate || !appliedEndDate) {
+        throw new Error("Datas não definidas");
+      }
+      return fetchRankingVeiculos("ocorrencias", formatDate(appliedStartDate), formatDate(appliedEndDate), 10);
+    },
+    enabled: !!(appliedStartDate && appliedEndDate),
+  });
+};
+
+export const useRankingVeiculosKmPercorrido = () => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  return useQuery({
+    queryKey: [
+      "ranking-veiculos-km-percorrido",
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!appliedStartDate || !appliedEndDate) {
+        throw new Error("Datas não definidas");
+      }
+      return fetchRankingVeiculos("km_percorrido", formatDate(appliedStartDate), formatDate(appliedEndDate), 10);
+    },
+    enabled: !!(appliedStartDate && appliedEndDate),
+  });
+};
+
+export const useDashboardVeiculo = (idVeiculo: number) => {
+  const { appliedStartDate, appliedEndDate } = useFilter();
+
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  // Usar datas padrão se não houver datas no filtro (últimos 30 dias)
+  const getDefaultDates = () => {
+    const hoje = new Date();
+    const umMesAtras = new Date(hoje);
+    umMesAtras.setDate(hoje.getDate() - 30);
+    return {
+      inicio: formatDate(umMesAtras),
+      fim: formatDate(hoje),
+    };
+  };
+
+  return useQuery({
+    queryKey: [
+      "dashboard-veiculo",
+      idVeiculo,
+      appliedStartDate ? formatDate(appliedStartDate) : null,
+      appliedEndDate ? formatDate(appliedEndDate) : null,
+    ],
+    queryFn: () => {
+      if (!idVeiculo) {
+        throw new Error("ID do veículo não fornecido");
+      }
+
+      const dates =
+        appliedStartDate && appliedEndDate
+          ? { inicio: formatDate(appliedStartDate), fim: formatDate(appliedEndDate) }
+          : getDefaultDates();
+
+      return fetchDashboardVeiculo(idVeiculo, dates.inicio, dates.fim);
+    },
+    enabled: !!idVeiculo,
+  });
+};

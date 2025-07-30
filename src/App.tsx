@@ -15,6 +15,8 @@ import Bairros from "./pages/Bairros";
 import BairrosIndividual from "./pages/BairrosIndividual";
 import Concessionarias from "./pages/Concessionarias";
 import ConcessionariaIndividual from "./pages/ConcessionariaIndividual";
+import Veiculos from "./pages/Veiculos";
+import VeiculoIndividual from "./pages/VeiculoIndividual";
 
 const routes = [
   { path: "/", element: <Index /> },
@@ -26,6 +28,8 @@ const routes = [
   { path: "/bairros-individual", element: <BairrosIndividual /> },
   { path: "/concessionarias", element: <Concessionarias /> },
   { path: "/concessionaria-individual", element: <ConcessionariaIndividual /> },
+  { path: "/veiculos", element: <Veiculos /> },
+  { path: "/veiculo-individual", element: <VeiculoIndividual /> },
   { path: "/eficiencia-das-linhas", element: <Eficiencia /> },
   { path: "/falhas-mecanicas", element: <Falhas /> },
 ];

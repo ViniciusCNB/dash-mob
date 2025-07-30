@@ -185,7 +185,7 @@ const Concessionarias = () => {
                 showExportButton={true}
                 chartTitle="Linhas por Concessionária"
                 rotateLabels={true}
-
+                itemLabel=""
               />
             )}
           </div>
@@ -210,7 +210,7 @@ const Concessionarias = () => {
                 showExportButton={true}
                 chartTitle="Ocorrências por Concessionária"
                 rotateLabels={true}
-
+                itemLabel=""
               />
             )}
           </div>
@@ -234,6 +234,7 @@ const Concessionarias = () => {
               showExportButton={true}
               chartTitle="Pontos Atendidos por Concessionária"
               rotateLabels={true}
+              itemLabel=""
             />
           </div>
         </CardContent>
@@ -257,7 +258,7 @@ const Concessionarias = () => {
                 showExportButton={true}
                 chartTitle="Passageiros por Concessionária"
                 rotateLabels={true}
-
+                itemLabel=""
               />
             )}
           </div>
